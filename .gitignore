@@ -20,3 +20,5 @@ temp/
 *.zip
 *.blockmap
 *.asar
+.vercel
+.env*.local
