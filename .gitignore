@@ -22,3 +22,6 @@ temp/
 *.asar
 .vercel
 .env*.local
+.playwright-cli/
+.env.production
+dist/

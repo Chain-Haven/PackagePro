@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { z } from 'zod';
@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
     const orgId = request.nextUrl.searchParams.get('org_id');
     if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
 
-    const admin = createAdminClient();
-    const { data: membership } = await admin
+    const supabase = await createClient();
+    const { data: membership } = await supabase
       .from('memberships')
       .select('role')
       .eq('user_id', user.id)
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { data: stations } = await admin
+    const { data: stations } = await supabase
       .from('stations')
       .select('*')
       .eq('org_id', orgId)
@@ -52,8 +52,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const admin = createAdminClient();
-    const { data: membership } = await admin
+    const supabase = await createClient();
+    const { data: membership } = await supabase
       .from('memberships')
       .select('role')
       .eq('user_id', user.id)
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { data: station, error } = await admin
+    const { data: station, error } = await supabase
       .from('stations')
       .insert({
         org_id: parsed.data.org_id,

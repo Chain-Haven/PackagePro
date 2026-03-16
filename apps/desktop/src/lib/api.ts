@@ -1,13 +1,11 @@
-const DEFAULT_API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-  'http://localhost:3000';
+import { getBackendUrl } from './supabase';
 
 async function getApiBase(): Promise<string> {
   if (typeof window !== 'undefined' && window.electronAPI?.getConfig) {
     const url = await window.electronAPI.getConfig('backend_url');
     if (typeof url === 'string' && url) return url;
   }
-  return DEFAULT_API_BASE;
+  return getBackendUrl();
 }
 
 interface ApiOptions {
@@ -42,7 +40,6 @@ export async function apiCall<T>(path: string, options: ApiOptions = {}): Promis
 }
 
 export const api = {
-  // Orders
   listOrders: (params: Record<string, string>) =>
     apiCall<{ orders: unknown[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`),
 
@@ -58,7 +55,6 @@ export const api = {
       body: { station_id: stationId },
     }),
 
-  // Videos
   requestUploadUrl: (orderId: string, stationId: string) =>
     apiCall<{ video_id: string; upload_url: string; storage_path: string; token: string }>(
       '/api/videos/upload-url',
@@ -70,26 +66,20 @@ export const api = {
           file_name: 'recording.webm',
           content_type: 'video/webm',
         },
-      }
+      },
     ),
 
   finalizeVideo: (
     videoId: string,
-    metadata?: { file_size_bytes?: number; duration_seconds?: number }
+    metadata?: { file_size_bytes?: number; duration_seconds?: number },
   ) =>
     apiCall(`/api/videos/${videoId}/finalize`, {
       method: 'POST',
       body: metadata || {},
     }),
 
-  // ShipStation
   getCarriers: (accountId: string) =>
     apiCall<{ carriers: unknown[] }>(`/api/shipstation/carriers?account_id=${accountId}`),
-
-  getServices: (accountId: string, carrierId: string) =>
-    apiCall<{ services: unknown[]; packages: unknown[] }>(
-      `/api/shipstation/carriers?account_id=${accountId}&carrier_id=${carrierId}`
-    ),
 
   createLabel: (body: unknown) =>
     apiCall<{
@@ -99,7 +89,6 @@ export const api = {
       shipment_cost: number;
     }>('/api/shipstation/labels', { method: 'POST', body }),
 
-  // Stations
   heartbeat: (stationId: string) =>
     apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }),
 };

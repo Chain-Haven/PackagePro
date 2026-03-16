@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser, getUserMemberships } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { z } from 'zod';
@@ -35,29 +35,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: existing } = await admin.from('organizations').select('id').eq('slug', parsed.data.slug).single();
-    if (existing) {
+    await supabase.from('users').upsert({
+      id: user.id,
+      email: user.email ?? '',
+      full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? '',
+    });
+
+    const org = {
+      id: crypto.randomUUID(),
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+    };
+
+    const { error: orgError } = await supabase
+      .from('organizations')
+      .insert(org);
+
+    if (orgError?.code === '23505') {
       return NextResponse.json({ error: 'Slug already taken' }, { status: 409 });
     }
-
-    const { data: org, error: orgError } = await admin
-      .from('organizations')
-      .insert({ name: parsed.data.name, slug: parsed.data.slug })
-      .select()
-      .single();
 
     if (orgError || !org) {
       return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
     }
 
-    const { error: memError } = await admin
+    const { error: memError } = await supabase
       .from('memberships')
       .insert({ user_id: user.id, org_id: org.id, role: 'org_owner' });
 
     if (memError) {
-      await admin.from('organizations').delete().eq('id', org.id);
       return NextResponse.json({ error: 'Failed to create membership' }, { status: 500 });
     }
 

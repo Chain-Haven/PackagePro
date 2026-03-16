@@ -15,7 +15,10 @@ import {
   Globe,
   Zap,
   ChevronRight,
+  Apple,
+  Download,
 } from 'lucide-react';
+import { docs as docEntries } from '@/lib/site-content';
 
 export default function LandingPage() {
   return (
@@ -28,6 +31,7 @@ export default function LandingPage() {
       <SecuritySection />
       <IntegrationSection />
       <PricingSection />
+      <DownloadSection />
       <DocsSection />
       <CTASection />
       <Footer />
@@ -109,10 +113,11 @@ function Hero() {
               <ArrowRight className="h-4 w-4" />
             </Link>
             <a
-              href="#how-it-works"
+              href="#downloads"
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-8 py-3.5 text-base font-semibold text-foreground transition-all hover:bg-muted sm:w-auto"
             >
-              See How It Works
+              <Download className="h-4 w-4" />
+              Download Now
             </a>
           </div>
 
@@ -452,15 +457,6 @@ function PricingSection() {
 /* ─── Docs ────────────────────────────────────────────────── */
 
 function DocsSection() {
-  const docs = [
-    { title: 'Getting Started', desc: 'Install the WooCommerce plugin, create your account, and connect your first station in under 10 minutes.', href: '#' },
-    { title: 'Desktop App Guide', desc: 'Camera setup, scanner calibration, printer configuration, and the packing workflow explained step by step.', href: '#' },
-    { title: 'WooCommerce Plugin', desc: 'Plugin installation, pairing flow, HPOS compatibility, email templates, and order metabox reference.', href: '#' },
-    { title: 'ShipStation Setup', desc: 'API key configuration, store mapping, carrier selection, label creation, and shipment sync.', href: '#' },
-    { title: 'Security Model', desc: 'Video access tokens, encryption at rest, RLS policies, HMAC verification, and retention policies.', href: '#' },
-    { title: 'API Reference', desc: '26 API endpoints covering auth, stores, stations, orders, videos, ShipStation proxy, and webhooks.', href: '#' },
-  ];
-
   return (
     <section id="docs" className="bg-muted/30 py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
@@ -475,18 +471,108 @@ function DocsSection() {
         </div>
 
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {docs.map((d) => (
-            <a key={d.title} href={d.href} className="group flex flex-col rounded-xl border border-border bg-background p-6 transition-all hover:border-primary/30 hover:shadow-md">
+          {docEntries.map((d) => (
+            <Link
+              key={d.slug}
+              href={`/docs/${d.slug}`}
+              className="group flex flex-col rounded-xl border border-border bg-background p-6 transition-all hover:border-primary/30 hover:shadow-md"
+            >
               <h3 className="font-bold">{d.title}</h3>
-              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{d.desc}</p>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{d.description}</p>
               <div className="mt-4 flex items-center gap-1 text-sm font-medium text-primary">
                 Read docs <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </div>
-            </a>
+            </Link>
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+/* ─── Downloads ───────────────────────────────────────────── */
+
+function DownloadSection() {
+  return (
+    <section id="downloads" className="py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Downloads</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            Get started in minutes
+          </h2>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Download the desktop app for your packing station and the WooCommerce plugin for your store.
+            Click any button to start downloading immediately.
+          </p>
+        </div>
+
+        <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <DownloadCard
+            icon={<Apple className="h-7 w-7" />}
+            title="Desktop App for macOS"
+            description="DMG installer for macOS. Supports Apple Silicon and Intel Macs. Includes webcam capture, barcode scanner, and ShipStation label printing."
+            href="/download/desktop/macos"
+            buttonText="Download .dmg"
+          />
+          <DownloadCard
+            icon={<Monitor className="h-7 w-7" />}
+            title="Desktop App for Windows"
+            description="NSIS installer for Windows 10+. Includes webcam capture, barcode scanner, and ShipStation label printing."
+            href="/download/desktop/windows"
+            buttonText="Download .exe"
+          />
+          <DownloadCard
+            icon={<Package className="h-7 w-7" />}
+            title="WooCommerce Plugin"
+            description="WordPress plugin ZIP. Upload via WP Admin &rarr; Plugins &rarr; Add New &rarr; Upload. HPOS compatible."
+            href="/download/plugin/woocommerce"
+            buttonText="Download .zip"
+          />
+        </div>
+
+        <div className="mt-12 rounded-2xl border border-border bg-muted/30 px-8 py-6">
+          <h3 className="text-lg font-bold">Quick setup</h3>
+          <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li><span className="font-semibold text-foreground">1.</span> Install the WooCommerce plugin on your store and note the pairing code it generates.</li>
+            <li><span className="font-semibold text-foreground">2.</span> Install the desktop app on your packing station and sign in with your PackagePro account.</li>
+            <li><span className="font-semibold text-foreground">3.</span> Enter the pairing code in the desktop app setup wizard to connect the store.</li>
+            <li><span className="font-semibold text-foreground">4.</span> Scan an order barcode to start recording. Print the label. Done.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DownloadCard({
+  icon,
+  title,
+  description,
+  href,
+  buttonText,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  href: string;
+  buttonText: string;
+}) {
+  return (
+    <div className="flex flex-col rounded-2xl border border-border bg-background p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <h3 className="mt-4 text-lg font-bold">{title}</h3>
+      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: description }} />
+      <a
+        href={href}
+        className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+      >
+        <Download className="h-4 w-4" />
+        {buttonText}
+      </a>
+    </div>
   );
 }
 
@@ -505,7 +591,7 @@ function CTASection() {
             <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">
               Reduce disputes. Build trust. Give your customers full visibility into how their orders are packed.
             </p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/signup"
                 className="inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-primary shadow-lg transition-all hover:bg-white/90"
@@ -514,11 +600,22 @@ function CTASection() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <a
-                href="https://github.com/Chain-Haven/PackagePro/releases"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-white/10"
+                href="/download/desktop/macos"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
               >
-                <Monitor className="h-4 w-4" />
-                Download Desktop App
+                <Apple className="h-4 w-4" /> macOS
+              </a>
+              <a
+                href="/download/desktop/windows"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
+              >
+                <Monitor className="h-4 w-4" /> Windows
+              </a>
+              <a
+                href="/download/plugin/woocommerce"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
+              >
+                <Package className="h-4 w-4" /> WooCommerce Plugin
               </a>
             </div>
           </div>
@@ -553,17 +650,17 @@ function Footer() {
               <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground">Features</a></li>
               <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">Pricing</a></li>
               <li><a href="#security" className="text-sm text-muted-foreground hover:text-foreground">Security</a></li>
-              <li><a href="https://github.com/Chain-Haven/PackagePro/releases" className="text-sm text-muted-foreground hover:text-foreground">Download</a></li>
+              <li><Link href="/download" className="text-sm text-muted-foreground hover:text-foreground">Download</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold">Resources</h4>
             <ul className="mt-3 space-y-2">
-              <li><a href="#docs" className="text-sm text-muted-foreground hover:text-foreground">Documentation</a></li>
+              <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">Documentation</Link></li>
               <li><a href="https://github.com/Chain-Haven/PackagePro" className="text-sm text-muted-foreground hover:text-foreground">GitHub</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Changelog</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Status</a></li>
+              <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-foreground">Changelog</Link></li>
+              <li><Link href="/status" className="text-sm text-muted-foreground hover:text-foreground">Status</Link></li>
             </ul>
           </div>
 
@@ -571,8 +668,8 @@ function Footer() {
             <h4 className="text-sm font-semibold">Company</h4>
             <ul className="mt-3 space-y-2">
               <li><a href="mailto:support@packagepro.io" className="text-sm text-muted-foreground hover:text-foreground">Support</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</a></li>
+              <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link></li>
               <li><a href="mailto:sales@packagepro.io" className="text-sm text-muted-foreground hover:text-foreground">Contact</a></li>
             </ul>
           </div>

@@ -10,6 +10,7 @@ export function SignupForm() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -17,9 +18,10 @@ export function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -33,14 +35,23 @@ export function SignupForm() {
       return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
+    if (data.session) {
+      router.push('/onboarding');
+      router.refresh();
+      return;
+    }
+
+    setSuccess('Account created. Check your email to confirm your account, then sign in to finish setup.');
+    setLoading(false);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+      )}
+      {success && (
+        <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">{success}</div>
       )}
       <div>
         <label htmlFor="fullName" className="block text-sm font-medium">Full Name</label>

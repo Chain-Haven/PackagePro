@@ -1,14 +1,13 @@
 import { useState } from 'react';
+import { getSupabase } from '../lib/supabase';
 
 interface Props {
-  onLogin: (stationId?: string) => void;
+  onLogin: () => void;
 }
 
 export function LoginScreen({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [backendUrl, setBackendUrl] = useState('http://localhost:3000');
-  const [stationId, setStationId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,74 +17,86 @@ export function LoginScreen({ onLogin }: Props) {
     setError('');
 
     try {
-      await window.electronAPI.setConfig('backend_url', backendUrl);
-      await window.electronAPI.setConfig('email', email);
-      if (stationId) {
-        await window.electronAPI.setConfig('station_id', stationId);
+      const supabase = getSupabase();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
       }
 
-      // TODO: Implement actual Supabase auth
-      onLogin(stationId || undefined);
+      onLogin();
     } catch (err) {
       setError(String(err));
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-background to-muted/40">
       <div className="w-full max-w-sm space-y-6 p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-primary">PackagePro</h1>
-          <p className="mt-2 text-muted-foreground">Fulfillment Station</p>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary mb-4">
+            <svg viewBox="0 0 64 64" fill="none" className="h-8 w-8">
+              <path d="M18 24.5 32 17l14 7.5v15L32 47l-14-7.5v-15Z" fill="#fff" />
+              <path d="M32 17v30" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" />
+              <path d="m18 24.5 14 7.5 14-7.5" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">PackagePro</h1>
+          <p className="mt-2 text-muted-foreground">Sign in to your fulfillment station</p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded bg-destructive/20 p-3 text-sm text-destructive">{error}</div>
+            <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+              {error}
+            </div>
           )}
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Backend URL</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Email</label>
             <input
-              type="url"
-              value={backendUrl}
-              onChange={(e) => setBackendUrl(e.target.value)}
-              className="w-full rounded-lg border border-border bg-muted px-4 py-3 focus:border-primary focus:outline-none"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-base focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Station ID (optional)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
             <input
-              type="text"
-              value={stationId}
-              onChange={(e) => setStationId(e.target.value)}
-              placeholder="e.g. station-1"
-              className="w-full rounded-lg border border-border bg-muted px-4 py-3 focus:border-primary focus:outline-none"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+              className="w-full rounded-lg border border-border bg-background px-4 py-3 text-base focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            required
-            className="w-full rounded-lg border border-border bg-muted px-4 py-3 text-lg focus:border-primary focus:outline-none"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            required
-            className="w-full rounded-lg border border-border bg-muted px-4 py-3 text-lg focus:border-primary focus:outline-none"
-          />
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-primary py-3 text-lg font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-lg bg-primary py-3.5 text-base font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Connecting...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Don&apos;t have an account? Create one at{' '}
+          <button
+            onClick={() => window.open('https://packageprotectpro.com/signup')}
+            className="text-primary hover:underline"
+          >
+            packageprotectpro.com
+          </button>
+        </p>
       </div>
     </div>
   );

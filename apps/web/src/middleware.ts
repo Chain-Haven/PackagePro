@@ -4,7 +4,7 @@ import type { CookieOptions } from '@supabase/ssr';
 
 export async function middleware(request: NextRequest) {
   const isRoot = request.nextUrl.pathname === '/';
-  const publicPrefixes = ['/login', '/signup', '/view', '/api/'];
+  const publicPrefixes = ['/login', '/signup', '/view', '/docs', '/download', '/changelog', '/status', '/privacy', '/terms', '/api/'];
   const isPublicPath = isRoot || publicPrefixes.some((p) => request.nextUrl.pathname.startsWith(p));
 
   if (isPublicPath) {

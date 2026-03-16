@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { z } from 'zod';
@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
     const orgId = request.nextUrl.searchParams.get('org_id');
     if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
 
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: membership } = await admin
+    const { data: membership } = await supabase
       .from('memberships')
       .select('role')
       .eq('user_id', user.id)
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const { data: stores } = await admin
+    const { data: stores } = await supabase
       .from('stores')
       .select('id, org_id, name, url, paired_at, sync_status, last_sync_at, created_at')
       .eq('org_id', orgId)
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: membership } = await admin
+    const { data: membership } = await supabase
       .from('memberships')
       .select('role')
       .eq('user_id', user.id)
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const pairingCode = generatePairingCode();
     const webhookSecret = generateToken(32);
 
-    const { data: store, error } = await admin
+    const { data: store, error } = await supabase
       .from('stores')
       .insert({
         org_id: parsed.data.org_id,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create store' }, { status: 500 });
     }
 
-    await admin.from('store_settings').insert({ store_id: store.id });
+    await supabase.from('store_settings').insert({ store_id: store.id });
 
     return NextResponse.json({
       store: {

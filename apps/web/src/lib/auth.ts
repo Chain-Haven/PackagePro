@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function getAuthenticatedUser() {
   try {
@@ -13,10 +12,10 @@ export async function getAuthenticatedUser() {
 }
 
 export async function getUserMemberships(userId: string) {
-  const admin = createAdminClient();
-  const { data } = await admin
+  const supabase = await createClient();
+  const { data } = await supabase
     .from('memberships')
-    .select('*, organizations(*)')
+    .select('role, organizations(*)')
     .eq('user_id', userId);
   return data ?? [];
 }
@@ -31,8 +30,8 @@ export async function requireAuth() {
 
 export async function requireOrgMember(orgId: string) {
   const user = await requireAuth();
-  const admin = createAdminClient();
-  const { data: membership } = await admin
+  const supabase = await createClient();
+  const { data: membership } = await supabase
     .from('memberships')
     .select('*')
     .eq('user_id', user.id)
