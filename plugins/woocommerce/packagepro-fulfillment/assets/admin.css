@@ -1,0 +1,29 @@
+.packagepro-pairing-section {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+.packagepro-pairing-code {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.packagepro-connected-section {
+    background: #f0fdf4;
+    padding: 20px;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    margin: 20px 0;
+}
+
+#packagepro-health-results {
+    margin-top: 15px;
+}
+
+#packagepro-health-results .health-item {
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
