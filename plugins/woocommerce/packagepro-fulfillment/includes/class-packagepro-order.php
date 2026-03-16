@@ -56,6 +56,7 @@ class PackagePro_Order {
         $video_status = $order->get_meta('_packagepro_video_status');
         $station_name = $order->get_meta('_packagepro_station_name');
         $recorded_at = $order->get_meta('_packagepro_recorded_at');
+        $viewer_url = $order->get_meta('_packagepro_viewer_url');
 
         if (!$video_id) {
             echo '<p>' . esc_html__('No packing video recorded yet.', 'packagepro-fulfillment') . '</p>';
@@ -86,6 +87,11 @@ class PackagePro_Order {
         </table>
         <?php if ($video_status === 'ready'): ?>
         <p style="margin-top: 10px;">
+            <?php if ($viewer_url): ?>
+            <a href="<?php echo esc_url($viewer_url); ?>" class="button button-primary" target="_blank" rel="noopener noreferrer" style="margin-right: 6px;">
+                <?php esc_html_e('View Video', 'packagepro-fulfillment'); ?>
+            </a>
+            <?php endif; ?>
             <button type="button" class="button packagepro-resend-email" data-order-id="<?php echo esc_attr($order->get_id()); ?>">
                 <?php esc_html_e('Resend Customer Email', 'packagepro-fulfillment'); ?>
             </button>

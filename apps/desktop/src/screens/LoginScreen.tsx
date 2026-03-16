@@ -6,6 +6,7 @@ interface Props {
 }
 
 export function LoginScreen({ onLogin }: Props) {
+  const packageProUrl = 'https://packagepro.io';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -91,10 +92,10 @@ export function LoginScreen({ onLogin }: Props) {
         <p className="text-center text-xs text-muted-foreground">
           Don&apos;t have an account? Create one at{' '}
           <button
-            onClick={() => window.open('https://packageprotectpro.com/signup')}
+            onClick={() => window.open(`${packageProUrl}/signup`)}
             className="text-primary hover:underline"
           >
-            packageprotectpro.com
+            packagepro.io
           </button>
         </p>
       </div>

@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleApiError } from '@/lib/api-utils';
+import { requireCronAccess } from '@/lib/security';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    await requireCronAccess(request);
     const admin = createAdminClient();
 
     const { data: expired } = await admin
@@ -30,7 +32,19 @@ export async function POST() {
 
     if (stuckUploads) {
       for (const upload of stuckUploads) {
+        const { data: video } = await admin
+          .from('videos')
+          .select('order_id')
+          .eq('id', upload.video_id)
+          .single();
+
         await admin.from('videos').update({ status: 'failed' }).eq('id', upload.video_id);
+        if (video?.order_id) {
+          await admin
+            .from('orders')
+            .update({ video_status: 'failed' })
+            .eq('id', video.order_id);
+        }
       }
     }
 

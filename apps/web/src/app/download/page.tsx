@@ -32,9 +32,9 @@ export default function DownloadPage() {
           <DownloadCard
             icon={<Monitor className="h-7 w-7" />}
             title="Windows"
-            description="NSIS installer for Windows 10 and later."
+            description="ZIP package for Windows 10 and later. Extract the archive and open the included desktop app."
             href="/download/desktop/windows"
-            buttonText="Download .exe"
+            buttonText="Download .zip"
           />
           <DownloadCard
             icon={<Package className="h-7 w-7" />}

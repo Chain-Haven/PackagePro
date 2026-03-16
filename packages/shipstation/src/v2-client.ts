@@ -1,4 +1,3 @@
-import { RateLimiter } from './rate-limiter';
 import type {
   V2Carrier,
   V2Service,
@@ -7,42 +6,43 @@ import type {
   V2LabelResponse,
   V2RateResponse,
 } from './types';
+import { getRetryDelayMs } from './retry-utils';
 
 export class ShipStationV2Client {
   private readonly baseUrl = 'https://api.shipstation.com';
   private readonly apiKey: string;
-  private readonly rateLimiter: RateLimiter;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.rateLimiter = new RateLimiter(200);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    await this.rateLimiter.acquire();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          'API-Key': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        'API-Key': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+      if (res.status === 429) {
+        const jitter = Math.floor(Math.random() * 1000);
+        const delayMs = getRetryDelayMs(res.headers, 5, jitter);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
+      }
 
-    if (res.status === 429) {
-      const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
-      const jitter = Math.random() * 1000;
-      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + jitter));
-      return this.request(method, path, body);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`ShipStation V2 ${method} ${path} failed: ${res.status} ${text}`);
+      }
+
+      return res.json() as Promise<T>;
     }
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`ShipStation V2 ${method} ${path} failed: ${res.status} ${text}`);
-    }
-
-    return res.json() as Promise<T>;
+    throw new Error(`ShipStation V2 ${method} ${path} exhausted retry budget`);
   }
 
   async listCarriers(): Promise<{ carriers: V2Carrier[] }> {

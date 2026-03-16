@@ -10,6 +10,7 @@ export interface ElectronAPI {
   uploadFile: (filePath: string, uploadUrl: string, token: string) => Promise<{ success: boolean; error?: string }>;
   getConfig: (key: string) => Promise<unknown>;
   setConfig: (key: string, value: unknown) => Promise<{ success: boolean }>;
+  setConfigMany: (values: Record<string, unknown>) => Promise<{ success: boolean }>;
 }
 
 declare global {

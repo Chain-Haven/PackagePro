@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { requireOrgMember } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const sp = request.nextUrl.searchParams;
     const orgId = sp.get('org_id');
     const storeId = sp.get('store_id');
@@ -19,15 +16,8 @@ export async function GET(request: NextRequest) {
 
     if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
 
+    await requireOrgMember(orgId, request);
     const admin = createAdminClient();
-    const { data: membership } = await admin
-      .from('memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('org_id', orgId)
-      .single();
-
-    if (!membership) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     let query = admin
       .from('orders')

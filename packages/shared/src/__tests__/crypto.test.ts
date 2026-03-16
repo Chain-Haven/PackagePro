@@ -2,10 +2,13 @@ import { describe, test, expect } from 'vitest';
 import {
   encrypt,
   decrypt,
+  encryptIfNeeded,
+  decryptIfNeeded,
   generateToken,
   hashToken,
   generatePairingCode,
   generateHmac,
+  isEncryptedValue,
   verifyHmac,
 } from '../crypto';
 import { randomBytes } from 'crypto';
@@ -33,6 +36,20 @@ describe('crypto utilities', () => {
     const a = encrypt('same_secret', testKey);
     const b = encrypt('same_secret', testKey);
     expect(a).not.toBe(b);
+  });
+
+  test('detects encrypted values and preserves them', () => {
+    const encrypted = encrypt('secret', testKey);
+    expect(isEncryptedValue(encrypted)).toBe(true);
+    expect(isEncryptedValue('plain_secret')).toBe(false);
+    expect(encryptIfNeeded(encrypted, testKey)).toBe(encrypted);
+    expect(decryptIfNeeded(encrypted, testKey)).toBe('secret');
+  });
+
+  test('decryptIfNeeded returns plaintext when legacy unencrypted values are present', () => {
+    expect(decryptIfNeeded('legacy_secret', testKey)).toBe('legacy_secret');
+    const encrypted = encryptIfNeeded('legacy_secret', testKey);
+    expect(decryptIfNeeded(encrypted, testKey)).toBe('legacy_secret');
   });
 
   test('decrypt with wrong key fails', () => {

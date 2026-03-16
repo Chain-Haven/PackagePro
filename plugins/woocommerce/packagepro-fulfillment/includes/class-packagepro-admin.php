@@ -2,6 +2,7 @@
 defined('ABSPATH') || exit;
 
 class PackagePro_Admin {
+    private const PACKAGEPRO_URL = 'https://packagepro.io';
 
     public static function init() {
         add_action('admin_menu', [__CLASS__, 'add_menu']);
@@ -27,7 +28,15 @@ class PackagePro_Admin {
     }
 
     public static function enqueue_assets($hook) {
-        if ($hook !== 'woocommerce_page_packagepro-settings') {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        $is_settings = $hook === 'woocommerce_page_packagepro-settings';
+        $is_order_screen = $screen && (
+            $screen->id === 'shop_order'
+            || $screen->id === 'woocommerce_page_wc-orders'
+            || (function_exists('wc_get_page_screen_id') && $screen->id === wc_get_page_screen_id('shop-order'))
+        );
+
+        if (!$is_settings && !$is_order_screen) {
             return;
         }
         wp_enqueue_style('packagepro-admin', PACKAGEPRO_PLUGIN_URL . 'assets/admin.css', [], PACKAGEPRO_VERSION);
@@ -44,9 +53,8 @@ class PackagePro_Admin {
         if (!current_user_can('manage_woocommerce')) {
             wp_send_json_error();
         }
-        $code = strtoupper(wp_generate_password(8, false, false));
-        update_option('packagepro_pairing_code', $code);
-        wp_send_json_success(['code' => $code]);
+        $pairing = PackagePro_API::issue_pairing_code();
+        wp_send_json_success($pairing);
     }
 
     public static function ajax_resend_email() {
@@ -62,12 +70,10 @@ class PackagePro_Admin {
         if (!$order) {
             wp_send_json_error();
         }
-        $backend_url = get_option('packagepro_backend_url', '');
-        $video_id = $order->get_meta('_packagepro_video_id');
-        if (!$backend_url || !$video_id) {
+        $viewer_url = $order->get_meta('_packagepro_viewer_url');
+        if (!$viewer_url) {
             wp_send_json_error();
         }
-        $viewer_url = rtrim($backend_url, '/') . '/view/' . $video_id;
         WC()->mailer();
         if (!class_exists('PackagePro_Email_Packing_Video')) {
             wp_send_json_error(['message' => __('Email system not available', 'packagepro-fulfillment')]);
@@ -79,14 +85,19 @@ class PackagePro_Admin {
 
     public static function render_settings_page() {
         $is_paired = get_option('packagepro_paired', false);
-        $pairing_code = get_option('packagepro_pairing_code', '');
+        $pairing = !$is_paired ? PackagePro_API::issue_pairing_code() : null;
+        $pairing_code = $pairing['code'] ?? '';
+        $pairing_expires_at = intval($pairing['expires_at'] ?? 0);
         $backend_url = get_option('packagepro_backend_url', '');
         $store_id = get_option('packagepro_store_id', '');
+        $last_webhook_error = get_option('packagepro_last_webhook_error', '');
+        $last_webhook_attempt_at = get_option('packagepro_last_webhook_attempt_at', '');
+        $last_sync_error = get_option('packagepro_last_sync_error', '');
+        $last_sync_attempt_at = get_option('packagepro_last_sync_attempt_at', '');
+        $webhook_stats = class_exists('PackagePro_Webhook_Queue')
+            ? PackagePro_Webhook_Queue::get_stats()
+            : ['pending' => 0, 'dead_letters' => 0, 'next_attempt_at' => null];
 
-        if (!$pairing_code && !$is_paired) {
-            $pairing_code = strtoupper(wp_generate_password(8, false, false));
-            update_option('packagepro_pairing_code', $pairing_code);
-        }
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('PackagePro Fulfillment', 'packagepro-fulfillment'); ?></h1>
@@ -96,12 +107,24 @@ class PackagePro_Admin {
                 <h2 style="margin-top: 0;"><?php esc_html_e('Connect to PackagePro', 'packagepro-fulfillment'); ?></h2>
                 <p><?php esc_html_e('Use this pairing code in the PackagePro admin dashboard or desktop app to connect this store:', 'packagepro-fulfillment'); ?></p>
 
-                <div style="background: #f0f0f1; border-radius: 8px; padding: 24px; text-align: center; margin: 16px 0;">
+                <div class="packagepro-pairing-code" style="background: #f0f0f1; border-radius: 8px; padding: 24px; text-align: center; margin: 16px 0;">
                     <div style="font-size: 2.5em; font-family: monospace; font-weight: bold; letter-spacing: 0.3em; color: #2271b1;">
-                        <?php echo esc_html($pairing_code); ?>
+                        <code><?php echo esc_html($pairing_code); ?></code>
                     </div>
                     <p style="margin: 12px 0 0; color: #646970; font-size: 13px;">
-                        <?php esc_html_e('Enter this code in the "Pair Store" step on packageprotectpro.com or the desktop app', 'packagepro-fulfillment'); ?>
+                        <?php
+                        printf(
+                            /* translators: %s: PackagePro URL */
+                            esc_html__('Enter this code in the "Pair Store" step on %s or the desktop app', 'packagepro-fulfillment'),
+                            esc_html(self::PACKAGEPRO_URL)
+                        );
+                        ?>
+                    </p>
+                    <p class="packagepro-pairing-expiry" data-expires-at="<?php echo esc_attr($pairing_expires_at); ?>" style="margin: 8px 0 0; color: #646970; font-size: 12px;">
+                        <?php esc_html_e('Code expires in 15:00', 'packagepro-fulfillment'); ?>
+                    </p>
+                    <p style="margin: 8px 0 0; color: #646970; font-size: 12px;">
+                        <?php esc_html_e('Reloading this page generates a fresh code and invalidates the previous one.', 'packagepro-fulfillment'); ?>
                     </p>
                 </div>
 
@@ -114,7 +137,15 @@ class PackagePro_Admin {
                 <div style="margin-top: 20px; padding: 16px; background: #fff8e5; border-left: 4px solid #dba617; border-radius: 2px;">
                     <strong><?php esc_html_e('Setup steps:', 'packagepro-fulfillment'); ?></strong>
                     <ol style="margin: 8px 0 0; padding-left: 20px;">
-                        <li><?php esc_html_e('Create an account at packageprotectpro.com', 'packagepro-fulfillment'); ?></li>
+                        <li>
+                            <?php
+                            printf(
+                                /* translators: %s: PackagePro URL */
+                                esc_html__('Create an account at %s', 'packagepro-fulfillment'),
+                                esc_html(self::PACKAGEPRO_URL)
+                            );
+                            ?>
+                        </li>
                         <li><?php esc_html_e('Add this store in the admin dashboard or desktop app', 'packagepro-fulfillment'); ?></li>
                         <li><?php esc_html_e('Enter the pairing code above when prompted', 'packagepro-fulfillment'); ?></li>
                         <li><?php esc_html_e('This page will show "Connected" once pairing completes', 'packagepro-fulfillment'); ?></li>
@@ -137,7 +168,42 @@ class PackagePro_Admin {
                         <th><?php esc_html_e('Store ID', 'packagepro-fulfillment'); ?></th>
                         <td><code><?php echo esc_html($store_id); ?></code></td>
                     </tr>
+                    <tr>
+                        <th><?php esc_html_e('Last webhook attempt', 'packagepro-fulfillment'); ?></th>
+                        <td><?php echo esc_html($last_webhook_attempt_at ?: 'Never'); ?></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Webhook queue', 'packagepro-fulfillment'); ?></th>
+                        <td>
+                            <?php
+                            printf(
+                                /* translators: 1: pending queue count, 2: dead letter count */
+                                esc_html__('%1$d pending, %2$d dead letters', 'packagepro-fulfillment'),
+                                intval($webhook_stats['pending']),
+                                intval($webhook_stats['dead_letters'])
+                            );
+                            ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Next webhook retry', 'packagepro-fulfillment'); ?></th>
+                        <td><?php echo esc_html($webhook_stats['next_attempt_at'] ?: 'Not scheduled'); ?></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Last reconcile attempt', 'packagepro-fulfillment'); ?></th>
+                        <td><?php echo esc_html($last_sync_attempt_at ?: 'Never'); ?></td>
+                    </tr>
                 </table>
+                <?php if ($last_webhook_error || $last_sync_error): ?>
+                <div style="margin-top: 16px; padding: 12px; background: #fcf0f1; border-left: 4px solid #d63638;">
+                    <?php if ($last_webhook_error): ?>
+                    <p><strong><?php esc_html_e('Webhook error:', 'packagepro-fulfillment'); ?></strong> <?php echo esc_html($last_webhook_error); ?></p>
+                    <?php endif; ?>
+                    <?php if ($last_sync_error): ?>
+                    <p><strong><?php esc_html_e('Reconcile error:', 'packagepro-fulfillment'); ?></strong> <?php echo esc_html($last_sync_error); ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 

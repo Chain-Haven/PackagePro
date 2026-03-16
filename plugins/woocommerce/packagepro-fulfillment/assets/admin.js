@@ -1,6 +1,45 @@
 (function($) {
     'use strict';
 
+    var pairingCountdownTimer = null;
+
+    function escapeHtml(value) {
+        return $('<div>').text(String(value)).html();
+    }
+
+    function formatCountdown(totalSeconds) {
+        var safeSeconds = Math.max(totalSeconds, 0);
+        var minutes = Math.floor(safeSeconds / 60);
+        var seconds = safeSeconds % 60;
+        return minutes + ':' + String(seconds).padStart(2, '0');
+    }
+
+    function startPairingCountdown(expiresAt) {
+        var $expiry = $('.packagepro-pairing-expiry');
+        if ($expiry.length === 0 || !expiresAt) {
+            return;
+        }
+
+        if (pairingCountdownTimer) {
+            window.clearInterval(pairingCountdownTimer);
+        }
+
+        function renderCountdown() {
+            var remaining = Math.floor(expiresAt - (Date.now() / 1000));
+            if (remaining <= 0) {
+                $expiry.text('Code expired. Generate a new code.');
+                window.clearInterval(pairingCountdownTimer);
+                pairingCountdownTimer = null;
+                return;
+            }
+
+            $expiry.text('Code expires in ' + formatCountdown(remaining));
+        }
+
+        renderCountdown();
+        pairingCountdownTimer = window.setInterval(renderCountdown, 1000);
+    }
+
     $('#packagepro-regenerate-code').on('click', function() {
         var $btn = $(this);
         $btn.prop('disabled', true).text('Generating...');
@@ -15,6 +54,8 @@
             success: function(response) {
                 if (response.success) {
                     $('.packagepro-pairing-code code').text(response.data.code);
+                    $('.packagepro-pairing-expiry').attr('data-expires-at', response.data.expires_at || '');
+                    startPairingCountdown(Number(response.data.expires_at || 0));
                 }
                 $btn.prop('disabled', false).text('Generate New Code');
             },
@@ -33,7 +74,7 @@
         $.get(packageproAdmin.rest_url + 'health', function(data) {
             var html = '<div class="packagepro-health-results">';
             for (var key in data) {
-                html += '<div class="health-item"><strong>' + key + ':</strong> ' + data[key] + '</div>';
+                html += '<div class="health-item"><strong>' + escapeHtml(key) + ':</strong> ' + escapeHtml(data[key]) + '</div>';
             }
             html += '</div>';
             $results.html(html);
@@ -61,4 +102,6 @@
             }
         });
     });
+
+    startPairingCountdown(Number($('.packagepro-pairing-expiry').data('expires-at') || 0));
 })(jQuery);

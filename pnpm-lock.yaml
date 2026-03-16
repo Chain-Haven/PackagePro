@@ -35,6 +35,9 @@ importers:
       lucide-react:
         specifier: ^0.468
         version: 0.468.0(react@19.2.4)
+      pdf-to-printer:
+        specifier: ^5.7.0
+        version: 5.7.0
       react:
         specifier: ^19
         version: 19.2.4
@@ -87,6 +90,9 @@ importers:
       vite-plugin-electron-renderer:
         specifier: ^0.14
         version: 0.14.6
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.31.1)
 
   apps/web:
     dependencies:
@@ -154,6 +160,9 @@ importers:
       typescript:
         specifier: ^5.6
         version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.31.1)
 
   packages/db:
     devDependencies:
@@ -189,6 +198,9 @@ importers:
       typescript:
         specifier: ^5.6
         version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.31.1)
 
   packages/supabase-client:
     dependencies:
@@ -2246,6 +2258,9 @@ packages:
   pathval@2.0.1:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
+
+  pdf-to-printer@5.7.0:
+    resolution: {integrity: sha512-CBZKTdKXjZ+ENiF6GcDUQVFq0pJOiM4LhP88XXN1rJ2lo5rEo6uPPYm8l010QYSapNEy33WYcJ+5lDy6d8mTEw==}
 
   pe-library@0.4.1:
     resolution: {integrity: sha512-eRWB5LBz7PpDu4PUlwT0PhnQfTQJlDDdPa35urV4Osrm0t0AqQFGn+UIkU3klZvwJ8KPO3VbBFsXquA6p6kqZw==}
@@ -4900,6 +4915,8 @@ snapshots:
   pathe@2.0.3: {}
 
   pathval@2.0.1: {}
+
+  pdf-to-printer@5.7.0: {}
 
   pe-library@0.4.1: {}
 

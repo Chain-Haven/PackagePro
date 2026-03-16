@@ -2,6 +2,111 @@
 defined('ABSPATH') || exit;
 
 class PackagePro_API {
+    private const PAIRING_CODE_TTL_SECONDS = 900;
+    private const PAIRING_RATE_LIMIT = 20;
+    private const PAIRING_CODE_HASH_OPTION = 'packagepro_pairing_code_hash';
+    private const PAIRING_CODE_CREATED_AT_OPTION = 'packagepro_pairing_code_created_at';
+    private const PACKAGEPRO_API_KEY_OPTION = 'packagepro_wc_api_key_id';
+
+    private static function log($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PackagePro] ' . $message);
+        }
+    }
+
+    private static function get_client_ip() {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'unknown');
+        if (strpos($ip, ',') !== false) {
+            $parts = explode(',', $ip);
+            $ip = trim($parts[0]);
+        }
+        return sanitize_text_field($ip);
+    }
+
+    private static function get_pairing_rate_limit_keys($ip, $store_id) {
+        return [
+            'packagepro_pairing_ip_' . md5((string) $ip),
+            'packagepro_pairing_store_' . md5((string) $store_id),
+        ];
+    }
+
+    private static function is_pairing_rate_limited($ip, $store_id) {
+        foreach (self::get_pairing_rate_limit_keys($ip, $store_id) as $key) {
+            $attempts = get_transient($key);
+            if (is_array($attempts) && (($attempts['count'] ?? 0) >= self::PAIRING_RATE_LIMIT)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static function record_pairing_attempt($ip, $store_id) {
+        foreach (self::get_pairing_rate_limit_keys($ip, $store_id) as $key) {
+            $attempts = get_transient($key);
+            if (!is_array($attempts)) {
+                $attempts = ['count' => 0, 'first' => time()];
+            }
+            $attempts['count'] = intval($attempts['count']) + 1;
+            set_transient($key, $attempts, HOUR_IN_SECONDS);
+        }
+    }
+
+    private static function validate_backend_url($backend_url) {
+        $parts = wp_parse_url($backend_url);
+        if (!$parts || empty($parts['host']) || empty($parts['scheme'])) {
+            return false;
+        }
+
+        $host = strtolower($parts['host']);
+        if ($parts['scheme'] === 'http') {
+            return in_array($host, ['localhost', '127.0.0.1'], true);
+        }
+
+        return $parts['scheme'] === 'https';
+    }
+
+    private static function get_pairing_owner_user_id() {
+        $users = get_users([
+            'role__in' => ['administrator', 'shop_manager'],
+            'number' => 1,
+            'fields' => 'ID',
+        ]);
+
+        return !empty($users) ? intval($users[0]) : 0;
+    }
+
+    public static function issue_pairing_code() {
+        $code = strtoupper(wp_generate_password(8, false, false));
+        update_option(self::PAIRING_CODE_HASH_OPTION, wp_hash_password($code));
+        update_option(self::PAIRING_CODE_CREATED_AT_OPTION, time());
+        delete_option('packagepro_pairing_code');
+
+        return [
+            'code' => $code,
+            'created_at' => self::get_pairing_code_created_at(),
+            'expires_at' => self::get_pairing_code_expires_at(),
+        ];
+    }
+
+    public static function get_pairing_code_created_at() {
+        return intval(get_option(self::PAIRING_CODE_CREATED_AT_OPTION, 0));
+    }
+
+    public static function get_pairing_code_expires_at() {
+        $created_at = self::get_pairing_code_created_at();
+        return $created_at > 0 ? $created_at + self::PAIRING_CODE_TTL_SECONDS : 0;
+    }
+
+    public static function is_pairing_code_expired() {
+        $expires_at = self::get_pairing_code_expires_at();
+        return !$expires_at || time() >= $expires_at;
+    }
+
+    public static function clear_pairing_code() {
+        delete_option(self::PAIRING_CODE_HASH_OPTION);
+        delete_option(self::PAIRING_CODE_CREATED_AT_OPTION);
+        delete_option('packagepro_pairing_code');
+    }
 
     public static function init() {
         add_action('rest_api_init', [__CLASS__, 'register_routes']);
@@ -31,7 +136,9 @@ class PackagePro_API {
         register_rest_route($namespace, '/health', [
             'methods' => 'GET',
             'callback' => [__CLASS__, 'handle_health'],
-            'permission_callback' => '__return_true',
+            'permission_callback' => function () {
+                return current_user_can('manage_woocommerce');
+            },
         ]);
     }
 
@@ -61,37 +168,76 @@ class PackagePro_API {
     }
 
     public static function handle_pair($request) {
+        $client_ip = self::get_client_ip();
         $pairing_code = sanitize_text_field($request->get_param('pairing_code'));
         $backend_url = esc_url_raw($request->get_param('backend_url'));
         $store_id = sanitize_text_field($request->get_param('store_id'));
 
+        if (self::is_pairing_rate_limited($client_ip, $store_id ?: 'unknown')) {
+            return new WP_Error('rate_limited', __('Too many pairing attempts. Please wait and try again.', 'packagepro-fulfillment'), ['status' => 429]);
+        }
+
         if (!$pairing_code || !$backend_url || !$store_id) {
+            self::record_pairing_attempt($client_ip, $store_id ?: 'unknown');
             return new WP_Error('missing_params', __('Missing required parameters', 'packagepro-fulfillment'), ['status' => 400]);
         }
 
-        $stored_code = get_option('packagepro_pairing_code', '');
+        if (!self::validate_backend_url($backend_url)) {
+            self::record_pairing_attempt($client_ip, $store_id);
+            return new WP_Error('invalid_backend', __('Invalid backend URL', 'packagepro-fulfillment'), ['status' => 400]);
+        }
 
-        if (!$stored_code || strtoupper($pairing_code) !== strtoupper($stored_code)) {
+        $stored_code_hash = get_option(self::PAIRING_CODE_HASH_OPTION, '');
+        $created_at = self::get_pairing_code_created_at();
+
+        if (
+            !$stored_code_hash
+            || !$created_at
+            || self::is_pairing_code_expired()
+            || !wp_check_password(strtoupper($pairing_code), $stored_code_hash)
+        ) {
+            self::record_pairing_attempt($client_ip, $store_id);
             return new WP_Error('invalid_code', __('Invalid pairing code', 'packagepro-fulfillment'), ['status' => 400]);
         }
 
         // Generate WooCommerce API credentials for the backend
-        $user_id = get_current_user_id() ?: 1;
+        $user_id = self::get_pairing_owner_user_id();
+        if (!$user_id) {
+            return new WP_Error('no_owner', __('Could not find an administrator to own the API key.', 'packagepro-fulfillment'), ['status' => 500]);
+        }
         
         global $wpdb;
         $consumer_key = 'ck_' . wp_generate_password(40, false);
         $consumer_secret = 'cs_' . bin2hex(random_bytes(20));
 
-        $hashed_key = function_exists('wc_api_hash')
-            ? wc_api_hash($consumer_key)
-            : hash_hmac('sha256', $consumer_key, 'wc-api');
+        $existing_key_id = intval(get_option(self::PACKAGEPRO_API_KEY_OPTION, 0));
+        if ($existing_key_id > 0) {
+            $wpdb->delete(
+                $wpdb->prefix . 'woocommerce_api_keys',
+                ['key_id' => $existing_key_id],
+                ['%d']
+            );
+        }
 
-        $wpdb->insert(
+        $wpdb->delete(
             $wpdb->prefix . 'woocommerce_api_keys',
             [
                 'user_id' => $user_id,
                 'description' => 'PackagePro Cloud Backend',
-                'permissions' => 'read_write',
+            ],
+            ['%d', '%s']
+        );
+
+        $hashed_key = function_exists('wc_api_hash')
+            ? wc_api_hash($consumer_key)
+            : hash_hmac('sha256', $consumer_key, 'wc-api');
+
+        $inserted = $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_api_keys',
+            [
+                'user_id' => $user_id,
+                'description' => 'PackagePro Cloud Backend',
+                'permissions' => 'read',
                 'consumer_key' => $hashed_key,
                 'consumer_secret' => $consumer_secret,
                 'truncated_key' => substr($consumer_key, -7),
@@ -99,11 +245,17 @@ class PackagePro_API {
             ['%d', '%s', '%s', '%s', '%s', '%s']
         );
 
+        if (!$inserted) {
+            return new WP_Error('api_key_insert_failed', __('Failed to create WooCommerce API key.', 'packagepro-fulfillment'), ['status' => 500]);
+        }
+
+        update_option(self::PACKAGEPRO_API_KEY_OPTION, intval($wpdb->insert_id));
+
         // Save pairing state
         update_option('packagepro_paired', true);
         update_option('packagepro_backend_url', $backend_url);
         update_option('packagepro_store_id', $store_id);
-        delete_option('packagepro_pairing_code');
+        self::clear_pairing_code();
 
         $site_url = get_site_url();
         $store_name = get_bloginfo('name');
@@ -126,6 +278,7 @@ class PackagePro_API {
         $station_name = sanitize_text_field($request->get_param('station_name'));
         $recorded_at = sanitize_text_field($request->get_param('recorded_at'));
         $viewer_token_hash = sanitize_text_field($request->get_param('viewer_token_hash'));
+        $viewer_url = esc_url_raw($request->get_param('viewer_url'));
 
         $order = wc_get_order($order_id);
         if (!$order) {
@@ -137,6 +290,9 @@ class PackagePro_API {
         $order->update_meta_data('_packagepro_station_name', $station_name);
         $order->update_meta_data('_packagepro_recorded_at', $recorded_at);
         $order->update_meta_data('_packagepro_viewer_token', $viewer_token_hash);
+        if ($viewer_url) {
+            $order->update_meta_data('_packagepro_viewer_url', $viewer_url);
+        }
         $order->save();
 
         $order->add_order_note(
@@ -191,9 +347,6 @@ class PackagePro_API {
 
         $health = [
             'plugin_version' => PACKAGEPRO_VERSION,
-            'wc_version' => defined('WC_VERSION') ? WC_VERSION : 'unknown',
-            'wp_version' => get_bloginfo('version'),
-            'php_version' => phpversion(),
             'paired' => (bool) $is_paired,
             'hpos_enabled' => $hpos_enabled,
             'timestamp' => current_time('c'),

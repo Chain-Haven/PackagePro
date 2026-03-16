@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getAuthenticatedUser, getUserMemberships } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { z } from 'zod';
@@ -9,9 +9,9 @@ const CreateOrgSchema = z.object({
   slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const memberships = await getUserMemberships(user.id);
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const admin = createAdminClient();
 
-    await supabase.from('users').upsert({
+    await admin.from('users').upsert({
       id: user.id,
       email: user.email ?? '',
       full_name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? '',
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       slug: parsed.data.slug,
     };
 
-    const { error: orgError } = await supabase
+    const { error: orgError } = await admin
       .from('organizations')
       .insert(org);
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create organization' }, { status: 500 });
     }
 
-    const { error: memError } = await supabase
+    const { error: memError } = await admin
       .from('memberships')
       .insert({ user_id: user.id, org_id: org.id, role: 'org_owner' });
 

@@ -1,16 +1,35 @@
-const statusChecks = [
-  { label: 'Marketing site', value: 'Operational' },
-  { label: 'Admin authentication', value: 'Operational' },
-  { label: 'Supabase project', value: 'Connected' },
-  { label: 'WooCommerce pairing flow', value: 'Ready for store install' },
-];
+import { getWebAppUrl } from '@/lib/env';
 
 export const metadata = {
   title: 'PackagePro Status',
   description: 'Current PackagePro platform status and operational readiness summary.',
 };
 
-export default function StatusPage() {
+type HealthResponse = {
+  status: 'ok' | 'degraded';
+  checks: {
+    supabase: 'ok' | 'error';
+    cron: 'configured' | 'missing';
+  };
+  timestamp: string;
+};
+
+export const dynamic = 'force-dynamic';
+
+export default async function StatusPage() {
+  const healthResponse = await fetch(`${getWebAppUrl()}/api/health`, {
+    cache: 'no-store',
+  }).catch(() => null);
+  const health = healthResponse && healthResponse.ok
+    ? ((await healthResponse.json()) as HealthResponse)
+    : null;
+  const statusChecks = [
+    { label: 'Platform health', value: health?.status === 'ok' ? 'Operational' : 'Degraded' },
+    { label: 'Supabase connectivity', value: health?.checks.supabase === 'ok' ? 'Connected' : 'Unavailable' },
+    { label: 'Maintenance cron', value: health?.checks.cron === 'configured' ? 'Configured' : 'Missing' },
+    { label: 'Last health timestamp', value: health?.timestamp ? new Date(health.timestamp).toLocaleString() : 'Unavailable' },
+  ];
+
   return (
     <div className="min-h-screen bg-muted/30 px-6 py-16">
       <div className="mx-auto max-w-4xl">

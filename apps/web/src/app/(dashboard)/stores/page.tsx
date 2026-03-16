@@ -30,7 +30,7 @@ export default async function StoresPage() {
 
   const { data: stores } = await supabase
     .from('stores')
-    .select('id, name, url, sync_status, pairing_code, paired_at, created_at')
+    .select('id, name, url, sync_status, paired_at, created_at')
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
 
@@ -56,11 +56,6 @@ export default async function StoresPage() {
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   {store.paired_at ? 'Paired' : store.sync_status ?? 'pending'}
                 </span>
-              </div>
-
-              <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Pairing code</p>
-                <p className="mt-1 font-mono text-sm">{store.pairing_code ?? 'Generated after creation'}</p>
               </div>
             </div>
           ))

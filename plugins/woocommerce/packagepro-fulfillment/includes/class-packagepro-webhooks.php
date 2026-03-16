@@ -74,20 +74,11 @@ class PackagePro_Webhooks {
             ],
         ], $extra);
 
-        $body = wp_json_encode($payload);
-        $timestamp = time();
-        $signature = hash_hmac('sha256', $timestamp . '.' . $body, $secret);
-
-        wp_remote_post($backend_url . '/api/webhooks/woo/' . $store_id, [
-            'body' => $body,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-PackagePro-Signature' => $signature,
-                'X-PackagePro-Timestamp' => (string) $timestamp,
-                'X-PackagePro-Topic' => $topic,
-            ],
-            'timeout' => 15,
-            'blocking' => false,
-        ]);
+        PackagePro_Webhook_Queue::enqueue(
+            $backend_url,
+            $store_id,
+            $topic,
+            wp_json_encode($payload)
+        );
     }
 }

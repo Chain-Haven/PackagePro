@@ -1,12 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiCall } from '../lib/api';
-import { getSupabase } from '../lib/supabase';
+import { sortRatesByAmount } from '../lib/shipping-rates';
+import { loadShipFromConfig, persistShipFromConfig } from '../lib/ship-from-config';
 
 interface ShippingPanelProps {
   orderId: string;
   stationId: string;
   shippingAddress?: Record<string, string>;
   onLabelCreated: (label: LabelInfo) => void;
+  onLabelVoided?: () => void;
+  preferredAccountId?: string | null;
+  allowedAccountIds?: string[];
 }
 
 export interface LabelInfo {
@@ -24,7 +28,15 @@ interface ShipStationAccount { id: string; label: string; connection_status: str
 
 type ShipMode = 'standard' | 'manual' | 'reship';
 
-export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCreated }: ShippingPanelProps) {
+export function ShippingPanel({
+  orderId,
+  stationId,
+  shippingAddress,
+  onLabelCreated,
+  onLabelVoided,
+  preferredAccountId,
+  allowedAccountIds,
+}: ShippingPanelProps) {
   const [mode, setMode] = useState<ShipMode>('standard');
   const [accounts, setAccounts] = useState<ShipStationAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState('');
@@ -57,24 +69,70 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
   const [ratesLoading, setRatesLoading] = useState(false);
   const [error, setError] = useState('');
   const [labelInfo, setLabelInfo] = useState<LabelInfo | null>(null);
+  const [shipFromLoaded, setShipFromLoaded] = useState(false);
+  const sortedRates = useMemo(() => sortRatesByAmount(rates), [rates]);
 
   useEffect(() => {
     loadAccounts();
+  }, [preferredAccountId, allowedAccountIds]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSavedShipFrom() {
+      try {
+        const config = await loadShipFromConfig(window.electronAPI);
+        if (cancelled) return;
+        if (config.name) setShipFromName(config.name);
+        if (config.address) setShipFromAddress(config.address);
+        if (config.city) setShipFromCity(config.city);
+        if (config.state) setShipFromState(config.state);
+        if (config.zip) setShipFromZip(config.zip);
+      } finally {
+        if (!cancelled) {
+          setShipFromLoaded(true);
+        }
+      }
+    }
+
+    void loadSavedShipFrom();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!shipFromLoaded) return;
+
+    void persistShipFromConfig(window.electronAPI, {
+      name: shipFromName,
+      address: shipFromAddress,
+      city: shipFromCity,
+      state: shipFromState,
+      zip: shipFromZip,
+    });
+  }, [shipFromAddress, shipFromCity, shipFromLoaded, shipFromName, shipFromState, shipFromZip]);
 
   async function loadAccounts() {
     try {
-      const supabase = getSupabase();
       const orgId = await window.electronAPI.getConfig('org_id') as string;
       if (!orgId) return;
-      const { data } = await supabase
-        .from('shipstation_accounts')
-        .select('id, label, connection_status')
-        .eq('org_id', orgId);
-      setAccounts(data ?? []);
-      if (data && data.length > 0) {
-        setSelectedAccountId(data[0].id);
-        loadCarriers(data[0].id);
+      const res = await apiCall<{ accounts: ShipStationAccount[] }>(`/api/shipstation/accounts?${new URLSearchParams({ org_id: orgId })}`);
+      const data = res.accounts ?? [];
+      const filteredAccounts =
+        allowedAccountIds && allowedAccountIds.length > 0
+          ? data.filter((account) => allowedAccountIds.includes(account.id))
+          : data;
+      setAccounts(filteredAccounts);
+      if (filteredAccounts.length > 0) {
+        const preferred =
+          (preferredAccountId && filteredAccounts.find((account) => account.id === preferredAccountId)?.id) ||
+          filteredAccounts[0].id;
+        setSelectedAccountId(preferred);
+        loadCarriers(preferred);
+      } else {
+        setSelectedAccountId('');
       }
     } catch { /* skip */ }
   }
@@ -144,6 +202,7 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
         method: 'POST',
         body: {
           order_id: orderId,
+          account_id: selectedAccountId,
           carrier_id: selectedCarrierId,
           service_code: rateServiceCode || selectedServiceCode,
           ship_to: dest,
@@ -168,6 +227,7 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
     try {
       await apiCall(`/api/shipstation/labels/${labelInfo.label_id}/void`, { method: 'POST' });
       setLabelInfo(null);
+      onLabelVoided?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to void label');
     } finally {
@@ -262,7 +322,7 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
         </select>
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-5 gap-1.5">
         <div className="col-span-2 flex gap-1">
           <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="Weight" className="flex-1 rounded border border-border px-2 py-1.5 text-xs" />
           <select value={weightUnit} onChange={(e) => setWeightUnit(e.target.value)} className="w-16 rounded border border-border px-1 py-1.5 text-xs">
@@ -273,6 +333,7 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
         </div>
         <input type="number" value={length} onChange={(e) => setLength(e.target.value)} placeholder="L" className="rounded border border-border px-2 py-1.5 text-xs" />
         <input type="number" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="W" className="rounded border border-border px-2 py-1.5 text-xs" />
+        <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="H" className="rounded border border-border px-2 py-1.5 text-xs" />
       </div>
 
       <button onClick={handleGetRates} disabled={ratesLoading || !selectedAccountId} className="w-full rounded-lg border border-primary py-2 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-50">
@@ -281,7 +342,7 @@ export function ShippingPanel({ orderId, stationId, shippingAddress, onLabelCrea
 
       {rates.length > 0 && (
         <div className="max-h-40 overflow-y-auto space-y-1.5">
-          {rates.sort((a, b) => a.shipping_amount.amount - b.shipping_amount.amount).map((rate) => (
+          {sortedRates.map((rate) => (
             <button key={rate.rate_id} onClick={() => handleCreateLabel(rate.service_code)} className="w-full rounded-lg border border-border p-2 text-left hover:border-primary/40 hover:bg-muted/30 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium">{rate.service_type}</span>

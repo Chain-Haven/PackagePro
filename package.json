@@ -3,8 +3,10 @@
   "private": true,
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "node scripts/verify-no-local-secrets.mjs && turbo build",
     "lint": "turbo lint",
+    "security:env": "node scripts/verify-no-local-secrets.mjs",
+    "test:ops": "node --test \"scripts/verify-no-local-secrets.test.mjs\"",
     "type-check": "turbo type-check",
     "clean": "turbo clean"
   },

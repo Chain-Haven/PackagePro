@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { selectRecordingMimeType } from '../lib/camera-utils';
 
 interface RecordingState {
   isRecording: boolean;
@@ -21,8 +22,9 @@ export function useRecording(sessionId: string) {
     async (stream: MediaStream) => {
       streamRef.current = stream;
       const videoOnly = new MediaStream(stream.getVideoTracks());
+      const mimeType = selectRecordingMimeType();
       const recorder = new MediaRecorder(videoOnly, {
-        mimeType: 'video/webm;codecs=vp8',
+        mimeType,
         videoBitsPerSecond: 2_500_000,
       });
 

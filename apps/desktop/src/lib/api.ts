@@ -1,4 +1,4 @@
-import { getBackendUrl } from './supabase';
+import { getBackendUrl, getSupabase } from './supabase';
 
 async function getApiBase(): Promise<string> {
   if (typeof window !== 'undefined' && window.electronAPI?.getConfig) {
@@ -17,12 +17,16 @@ interface ApiOptions {
 export async function apiCall<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, token } = options;
   const API_BASE = await getApiBase();
+  const sessionToken =
+    token ||
+    (await getSupabase().auth.getSession()).data.session?.access_token ||
+    undefined;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -40,8 +44,65 @@ export async function apiCall<T>(path: string, options: ApiOptions = {}): Promis
 }
 
 export const api = {
+  listOrganizations: () =>
+    apiCall<{ organizations: Array<{ id: string; name: string; slug: string; role: string }> }>(
+      '/api/organizations'
+    ),
+
+  createOrganization: (body: { name: string; slug: string }) =>
+    apiCall<{ organization: { id: string; name: string; slug: string } }>(
+      '/api/organizations',
+      {
+        method: 'POST',
+        body,
+      }
+    ),
+
+  listStores: (orgId: string) =>
+    apiCall<{ stores: Array<{ id: string; name: string; url: string; paired_at?: string | null; sync_status?: string | null }> }>(
+      `/api/stores?${new URLSearchParams({ org_id: orgId })}`
+    ),
+
+  listStations: (orgId: string) =>
+    apiCall<{ stations: Array<{ id: string; store_id: string; name: string; machine_id?: string | null; status?: string | null }> }>(
+      `/api/stations?${new URLSearchParams({ org_id: orgId })}`
+    ),
+
+  createStore: (body: { org_id: string; name: string; url: string }) =>
+    apiCall<{ store: { id: string; name: string; url: string; paired_at?: string | null; sync_status?: string | null } }>(
+      '/api/stores',
+      {
+        method: 'POST',
+        body,
+      }
+    ),
+
+  pairStore: (storeId: string, pairingCode: string) =>
+    apiCall<{ success: boolean; paired_at?: string; store_name?: string }>(
+      `/api/stores/${storeId}/pair`,
+      {
+        method: 'POST',
+        body: { pairing_code: pairingCode },
+      }
+    ),
+
+  registerStation: (body: { org_id: string; store_id: string; name: string; machine_id?: string }) =>
+    apiCall<{ station: { id: string; name: string } }>(
+      '/api/stations',
+      {
+        method: 'POST',
+        body,
+      }
+    ),
+
   listOrders: (params: Record<string, string>) =>
     apiCall<{ orders: unknown[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`),
+
+  getOrder: (orderId: string) =>
+    apiCall<{ order: unknown }>(`/api/orders/${orderId}`),
+
+  resolveOrder: (params: Record<string, string>) =>
+    apiCall<{ order: unknown }>(`/api/orders/resolve?${new URLSearchParams(params)}`),
 
   lockOrder: (orderId: string, stationId: string) =>
     apiCall<{ lock_id: string; expires_at: string }>(`/api/orders/${orderId}/lock`, {
@@ -67,6 +128,14 @@ export const api = {
           content_type: 'video/webm',
         },
       },
+    ),
+
+  refreshUploadUrl: (videoId: string) =>
+    apiCall<{ video_id: string; upload_url: string; storage_path: string; token: string }>(
+      `/api/videos/${videoId}/refresh-upload-url`,
+      {
+        method: 'POST',
+      }
     ),
 
   finalizeVideo: (

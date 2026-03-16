@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSupabase, getBackendUrl } from '../lib/supabase';
+import { getSupabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface Props {
   onComplete: (config: { orgId: string; storeId: string; stationId: string }) => void;
@@ -18,9 +19,17 @@ interface Store {
   id: string;
   name: string;
   url: string;
-  pairing_code: string | null;
-  paired_at: string | null;
-  sync_status: string | null;
+  pairing_code?: string | null;
+  paired_at?: string | null;
+  sync_status?: string | null;
+}
+
+interface Station {
+  id: string;
+  store_id: string;
+  name: string;
+  machine_id?: string | null;
+  status?: string | null;
 }
 
 export function SetupWizardScreen({ onComplete, onLogout }: Props) {
@@ -33,14 +42,14 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
   const [selectedOrg, setSelectedOrg] = useState<Org | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [machineId, setMachineId] = useState('');
 
   const [orgName, setOrgName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [storeUrl, setStoreUrl] = useState('');
   const [pairingCode, setPairingCode] = useState('');
   const [stationName, setStationName] = useState('Packing Station 1');
-
-  const backendUrl = getBackendUrl();
 
   const loadState = useCallback(async () => {
     setError('');
@@ -49,17 +58,8 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     if (!user) return;
     setUserEmail(user.email ?? '');
 
-    const { data: memberships } = await supabase
-      .from('memberships')
-      .select('role, organizations(id, name, slug)')
-      .eq('user_id', user.id);
-
-    const orgList: Org[] = (memberships ?? [])
-      .map((m) => {
-        const org = Array.isArray(m.organizations) ? m.organizations[0] : m.organizations;
-        return org as Org | null;
-      })
-      .filter((o): o is Org => o !== null);
+    const { organizations } = await api.listOrganizations();
+    const orgList: Org[] = organizations;
 
     setOrgs(orgList);
 
@@ -71,13 +71,11 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     const org = orgList[0];
     setSelectedOrg(org);
 
-    const { data: storeList } = await supabase
-      .from('stores')
-      .select('id, name, url, pairing_code, paired_at, sync_status')
-      .eq('org_id', org.id)
-      .order('created_at', { ascending: false });
+    const { stores: storeList } = await api.listStores(org.id);
+    const { stations: stationList } = await api.listStations(org.id);
 
     setStores(storeList ?? []);
+    setStations(stationList ?? []);
 
     if ((storeList ?? []).length === 0) {
       setStep('select-store');
@@ -86,30 +84,34 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
 
     const store = (storeList ?? [])[0];
     setSelectedStore(store);
-
-    const { data: stations } = await supabase
-      .from('stations')
-      .select('id, name, status')
-      .eq('org_id', org.id)
-      .eq('store_id', store.id);
-
-    if ((stations ?? []).length > 0) {
-      const station = stations![0];
-      await window.electronAPI.setConfig('backend_url', backendUrl);
-      await window.electronAPI.setConfig('org_id', org.id);
-      await window.electronAPI.setConfig('store_id', store.id);
-      await window.electronAPI.setConfig('station_id', station.id);
-      await window.electronAPI.setConfig('station_name', station.name);
-      onComplete({ orgId: org.id, storeId: store.id, stationId: station.id });
-      return;
-    }
-
-    setStep('register-station');
-  }, [backendUrl, onComplete]);
+    setStep('select-store');
+  }, []);
 
   useEffect(() => {
     loadState();
   }, [loadState]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function ensureMachineId() {
+      const savedMachineId = await window.electronAPI.getConfig('machine_id');
+      if (typeof savedMachineId === 'string' && savedMachineId) {
+        if (!cancelled) setMachineId(savedMachineId);
+        return;
+      }
+
+      const generatedMachineId = crypto.randomUUID();
+      await window.electronAPI.setConfig('machine_id', generatedMachineId);
+      if (!cancelled) setMachineId(generatedMachineId);
+    }
+
+    void ensureMachineId();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleCreateOrg(e: React.FormEvent) {
     e.preventDefault();
@@ -117,29 +119,13 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     setError('');
 
     try {
-      const supabase = getSupabase();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not signed in');
-
-      await supabase.from('users').upsert({
-        id: user.id,
-        email: user.email ?? '',
-        full_name: user.user_metadata?.full_name ?? '',
-      });
-
       const slug = orgName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-      const org: Org = { id: crypto.randomUUID(), name: orgName, slug };
-
-      const { error: orgErr } = await supabase.from('organizations').insert(org);
-      if (orgErr) throw new Error(orgErr.message);
-
-      const { error: memErr } = await supabase
-        .from('memberships')
-        .insert({ user_id: user.id, org_id: org.id, role: 'org_owner' });
-      if (memErr) throw new Error(memErr.message);
+      const { organization } = await api.createOrganization({ name: orgName, slug });
+      const org: Org = organization;
 
       setSelectedOrg(org);
       setOrgs([org]);
+      setStations([]);
       setStep('select-store');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -155,18 +141,7 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     setError('');
 
     try {
-      const res = await fetch(`${backendUrl}/api/stores`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ org_id: selectedOrg.id, name: storeName, url: storeUrl }),
-        credentials: 'include',
-      });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? `Failed (${res.status})`);
-      }
-
+      await api.createStore({ org_id: selectedOrg.id, name: storeName, url: storeUrl });
       await loadStores();
       setStep('pair-plugin');
     } catch (err) {
@@ -178,14 +153,15 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
 
   async function loadStores() {
     if (!selectedOrg) return;
-    const supabase = getSupabase();
-    const { data } = await supabase
-      .from('stores')
-      .select('id, name, url, pairing_code, paired_at, sync_status')
-      .eq('org_id', selectedOrg.id)
-      .order('created_at', { ascending: false });
-    setStores(data ?? []);
-    if (data && data.length > 0) setSelectedStore(data[0]);
+    const { stores: storeList } = await api.listStores(selectedOrg.id);
+    setStores(storeList ?? []);
+    if (storeList && storeList.length > 0) setSelectedStore(storeList[0]);
+  }
+
+  async function loadStations() {
+    if (!selectedOrg) return;
+    const { stations: stationList } = await api.listStations(selectedOrg.id);
+    setStations(stationList ?? []);
   }
 
   function handleSelectStore(store: Store) {
@@ -204,19 +180,9 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     setError('');
 
     try {
-      const res = await fetch(`${backendUrl}/api/stores/${selectedStore.id}/pair`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pairing_code: pairingCode }),
-        credentials: 'include',
-      });
-
-      const payload = await res.json();
-      if (!res.ok) {
-        throw new Error((payload as { error?: string }).error ?? `Pairing failed (${res.status})`);
-      }
-
+      await api.pairStore(selectedStore.id, pairingCode);
       await loadStores();
+      await loadStations();
       setStep('register-station');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -232,26 +198,20 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     setError('');
 
     try {
-      const supabase = getSupabase();
-      const { data: station, error: stErr } = await supabase
-        .from('stations')
-        .insert({
-          org_id: selectedOrg.id,
-          store_id: selectedStore.id,
-          name: stationName,
-          status: 'online',
-          last_heartbeat: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      const { station } = await api.registerStation({
+        org_id: selectedOrg.id,
+        store_id: selectedStore.id,
+        name: stationName,
+        machine_id: machineId || undefined,
+      });
 
-      if (stErr || !station) throw new Error(stErr?.message ?? 'Failed to register station');
-
-      await window.electronAPI.setConfig('backend_url', backendUrl);
-      await window.electronAPI.setConfig('org_id', selectedOrg.id);
-      await window.electronAPI.setConfig('store_id', selectedStore.id);
-      await window.electronAPI.setConfig('station_id', station.id);
-      await window.electronAPI.setConfig('station_name', station.name);
+      await window.electronAPI.setConfigMany({
+        backend_url: import.meta.env.VITE_BACKEND_URL,
+        org_id: selectedOrg.id,
+        store_id: selectedStore.id,
+        station_id: station.id,
+        station_name: station.name,
+      });
 
       setStep('ready');
       setTimeout(() => {
@@ -263,6 +223,36 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
       setLoading(false);
     }
   }
+
+  async function handleUseExistingStation(station: Station) {
+    if (!selectedOrg || !selectedStore) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      await window.electronAPI.setConfigMany({
+        backend_url: import.meta.env.VITE_BACKEND_URL,
+        org_id: selectedOrg.id,
+        store_id: selectedStore.id,
+        station_id: station.id,
+        station_name: station.name,
+        machine_id: machineId,
+      });
+
+      setStep('ready');
+      setTimeout(() => {
+        onComplete({ orgId: selectedOrg.id, storeId: selectedStore.id, stationId: station.id });
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const existingStationsForStore = selectedStore
+    ? stations.filter((station) => station.store_id === selectedStore.id)
+    : [];
 
   return (
     <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-background to-muted/40 p-8">
@@ -425,6 +415,24 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
             <p className="text-sm text-muted-foreground">
               Name this packing bench. Each station gets its own order lock and audit trail.
             </p>
+            {existingStationsForStore.length > 0 && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <p className="text-sm font-semibold">Reconnect to an existing station</p>
+                <div className="mt-3 space-y-2">
+                  {existingStationsForStore.map((station) => (
+                    <button
+                      key={station.id}
+                      type="button"
+                      onClick={() => void handleUseExistingStation(station)}
+                      className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-left text-sm hover:border-primary/40"
+                    >
+                      <span>{station.name}</span>
+                      <span className="text-xs text-muted-foreground">{station.status || 'offline'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium mb-1">Station name</label>
               <input

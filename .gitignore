@@ -25,3 +25,4 @@ temp/
 .playwright-cli/
 .env.production
 dist/
+apps/desktop/release-mac/

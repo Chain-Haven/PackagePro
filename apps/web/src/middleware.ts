@@ -1,24 +1,81 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
+import {
+  hasBearerAuthorization,
+  isPublicApiPath,
+  isPublicPath,
+} from '@/lib/middleware-auth';
+
+function applySecurityHeaders(response: NextResponse, request: NextRequest) {
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "connect-src 'self' https: wss: ws:",
+    ].join('; ')
+  );
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), browsing-topics=()'
+  );
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  response.headers.set('Cross-Origin-Resource-Policy', 'same-site');
+
+  if (
+    process.env.NODE_ENV === 'production' &&
+    request.nextUrl.protocol === 'https:'
+  ) {
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains; preload'
+    );
+  }
+
+  return response;
+}
 
 export async function middleware(request: NextRequest) {
-  const isRoot = request.nextUrl.pathname === '/';
-  const publicPrefixes = ['/login', '/signup', '/view', '/docs', '/download', '/changelog', '/status', '/privacy', '/terms', '/api/'];
-  const isPublicPath = isRoot || publicPrefixes.some((p) => request.nextUrl.pathname.startsWith(p));
+  const pathname = request.nextUrl.pathname;
+  const isApiPath = pathname.startsWith('/api/');
+  const isPublicRoute =
+    isPublicPath(pathname) ||
+    isPublicApiPath(pathname);
+  const hasBearerToken = hasBearerAuthorization(request.headers.get('authorization'));
 
-  if (isPublicPath) {
-    return NextResponse.next();
+  if (isPublicRoute) {
+    return applySecurityHeaders(NextResponse.next(), request);
+  }
+
+  if (isApiPath && hasBearerToken) {
+    return applySecurityHeaders(NextResponse.next(), request);
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    if (isPublicPath) return NextResponse.next();
+    if (isPublicRoute) return NextResponse.next();
+    if (isApiPath) {
+      return applySecurityHeaders(
+        NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+        request
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    return applySecurityHeaders(NextResponse.redirect(url), request);
   }
 
   let supabaseResponse = NextResponse.next({ request });
@@ -41,15 +98,18 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
+    if (isApiPath) {
+      return applySecurityHeaders(
+        NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+        request
+      );
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    return applySecurityHeaders(NextResponse.redirect(url), request);
   }
 
-  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
-  supabaseResponse.headers.set('X-Frame-Options', 'DENY');
-  supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  return supabaseResponse;
+  return applySecurityHeaders(supabaseResponse, request);
 }
 
 export const config = {

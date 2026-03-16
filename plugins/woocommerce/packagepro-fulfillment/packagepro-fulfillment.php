@@ -48,6 +48,7 @@ add_action('plugins_loaded', function () {
 
     require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-admin.php';
     require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-api.php';
+    require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-webhook-queue.php';
     require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-webhooks.php';
     require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-order.php';
     require_once PACKAGEPRO_PLUGIN_DIR . 'includes/class-packagepro-email.php';
@@ -56,6 +57,7 @@ add_action('plugins_loaded', function () {
 
     PackagePro_Admin::init();
     PackagePro_API::init();
+    PackagePro_Webhook_Queue::init();
     PackagePro_Webhooks::init();
     PackagePro_Order::init();
     PackagePro_Email::init();
@@ -95,5 +97,9 @@ register_activation_hook(__FILE__, function () {
 // Deactivation hook
 register_deactivation_hook(__FILE__, function () {
     wp_clear_scheduled_hook('packagepro_reconciliation_sync');
+    wp_clear_scheduled_hook('packagepro_process_webhook_queue');
+    if (function_exists('as_unschedule_all_actions')) {
+        as_unschedule_all_actions('packagepro_reconciliation_batch', [], 'packagepro');
+    }
     flush_rewrite_rules();
 });

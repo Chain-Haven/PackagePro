@@ -1,3 +1,43 @@
+import { getRequestIp } from '@/lib/api-utils';
+
+type AuditContext = {
+  admin: any;
+  orgId: string | null;
+  actorId?: string | null;
+  actorType: string;
+  action: string;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  details?: Record<string, unknown>;
+  request?: Request;
+};
+
+export async function writeAuditLog({
+  admin,
+  orgId,
+  actorId = null,
+  actorType,
+  action,
+  resourceType = null,
+  resourceId = null,
+  details = {},
+  request,
+}: AuditContext) {
+  const { error } = await admin.from('audit_logs').insert({
+    org_id: orgId,
+    actor_id: actorId,
+    actor_type: actorType,
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId,
+    details,
+    ip_address: request ? getRequestIp(request) : null,
+  });
+
+  if (error) {
+    throw new Error(`AUDIT_LOG_FAILED:${error.message}`);
+  }
+}
 import { createAdminClient } from '@/lib/supabase/admin';
 
 interface AuditParams {

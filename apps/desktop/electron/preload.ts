@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Config storage
   getConfig: (key: string) => ipcRenderer.invoke('config:get', key),
   setConfig: (key: string, value: any) => ipcRenderer.invoke('config:set', key, value),
+  setConfigMany: (values: Record<string, unknown>) => ipcRenderer.invoke('config:setMany', values),
 });

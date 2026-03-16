@@ -518,9 +518,9 @@ function DownloadSection() {
           <DownloadCard
             icon={<Monitor className="h-7 w-7" />}
             title="Desktop App for Windows"
-            description="NSIS installer for Windows 10+. Includes webcam capture, barcode scanner, and ShipStation label printing."
+            description="Windows ZIP package for Windows 10+. Extract the archive, then launch the included desktop app with webcam capture, barcode scanning, and ShipStation label printing."
             href="/download/desktop/windows"
-            buttonText="Download .exe"
+            buttonText="Download .zip"
           />
           <DownloadCard
             icon={<Package className="h-7 w-7" />}
