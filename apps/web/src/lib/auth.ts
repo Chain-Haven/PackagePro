@@ -2,10 +2,14 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function getAuthenticatedUser() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) return null;
-  return user;
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 export async function getUserMemberships(userId: string) {
@@ -20,7 +24,7 @@ export async function getUserMemberships(userId: string) {
 export async function requireAuth() {
   const user = await getAuthenticatedUser();
   if (!user) {
-    throw new Response('Unauthorized', { status: 401 });
+    throw new Error('UNAUTHORIZED');
   }
   return user;
 }
@@ -36,7 +40,7 @@ export async function requireOrgMember(orgId: string) {
     .single();
 
   if (!membership) {
-    throw new Response('Forbidden', { status: 403 });
+    throw new Error('FORBIDDEN');
   }
   return { user, membership };
 }
