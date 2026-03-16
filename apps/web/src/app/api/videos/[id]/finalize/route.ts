@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { generateToken, hashToken, generateHmac } from '@packagepro/shared';
@@ -14,9 +14,9 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json().catch(() => ({}));
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: video, error } = await admin
+    const { data: video, error } = await supabase
       .from('videos')
       .update({
         status: 'ready',
@@ -34,36 +34,36 @@ export async function POST(
       return NextResponse.json({ error: 'Video not found' }, { status: 404 });
     }
 
-    await admin
+    await supabase
       .from('uploads')
       .update({ status: 'completed', completed_at: new Date().toISOString() })
       .eq('video_id', videoId);
 
-    await admin.from('orders').update({ video_status: 'ready' }).eq('id', video.order_id);
+    await supabase.from('orders').update({ video_status: 'ready' }).eq('id', video.order_id);
 
     const rawToken = generateToken(32);
     const tokenHash = hashToken(rawToken);
     const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    await admin.from('video_access_tokens').insert({
+    await supabase.from('video_access_tokens').insert({
       video_id: videoId,
       order_id: video.order_id,
       token_hash: tokenHash,
       expires_at: expiresAt,
     });
 
-    await admin
+    await supabase
       .from('order_locks')
       .update({ released_at: new Date().toISOString() })
       .eq('order_id', video.order_id)
       .is('released_at', null);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://packageprotectpro.com';
     const viewerUrl = `${appUrl}/view/${rawToken}`;
 
-    const order = video.orders as any;
+    const order = video.orders as Record<string, unknown> | null;
     if (order) {
-      const { data: store } = await admin.from('stores').select('*').eq('id', video.store_id).single();
+      const { data: store } = await supabase.from('stores').select('*').eq('id', video.store_id).single();
 
       if (store?.paired_at && store.url && store.webhook_secret) {
         const timestamp = Math.floor(Date.now() / 1000);
@@ -103,11 +103,11 @@ export async function POST(
           body: emailPayload,
         }).catch(() => {});
 
-        await admin.from('email_events').insert({
+        await supabase.from('email_events').insert({
           order_id: video.order_id,
           store_id: video.store_id,
           type: 'packing_video_ready',
-          recipient: order.customer_email || 'unknown',
+          recipient: (order.customer_email as string) || 'unknown',
           status: 'sent',
           sent_at: new Date().toISOString(),
         });

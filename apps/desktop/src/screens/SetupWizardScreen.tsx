@@ -197,6 +197,34 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     }
   }
 
+  async function handlePairPlugin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedStore || !pairingCode) return;
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`${backendUrl}/api/stores/${selectedStore.id}/pair`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pairing_code: pairingCode }),
+        credentials: 'include',
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error((payload as { error?: string }).error ?? `Pairing failed (${res.status})`);
+      }
+
+      await loadStores();
+      setStep('register-station');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleRegisterStation(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedOrg || !selectedStore) return;
@@ -343,47 +371,52 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         )}
 
         {step === 'pair-plugin' && selectedStore && (
-          <div className="rounded-xl border border-border bg-background p-6 space-y-4">
+          <form onSubmit={handlePairPlugin} className="rounded-xl border border-border bg-background p-6 space-y-4">
             <h2 className="text-lg font-bold">Pair the WooCommerce plugin</h2>
             <p className="text-sm text-muted-foreground">
-              Install the PackagePro plugin on <span className="font-medium text-foreground">{selectedStore.url}</span>, then enter the pairing code shown in WP Admin &rarr; WooCommerce &rarr; PackagePro.
+              Open your store admin at <span className="font-medium text-foreground">{selectedStore.url}</span>, go to
+              <strong> WooCommerce &rarr; PackagePro</strong>, and copy the pairing code displayed there.
             </p>
 
-            {selectedStore.pairing_code && (
-              <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4 text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Your store pairing code</p>
-                <p className="mt-2 text-3xl font-mono font-bold tracking-widest text-primary">{selectedStore.pairing_code}</p>
-                <p className="mt-2 text-xs text-muted-foreground">Enter this code in the WooCommerce plugin settings page</p>
-              </div>
-            )}
+            <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">Steps</p>
+              <ol className="space-y-1.5 text-xs text-muted-foreground">
+                <li><span className="font-semibold text-foreground">1.</span> Install the PackagePro plugin on your WooCommerce store</li>
+                <li><span className="font-semibold text-foreground">2.</span> Open WP Admin &rarr; WooCommerce &rarr; PackagePro</li>
+                <li><span className="font-semibold text-foreground">3.</span> Copy the pairing code shown on that page</li>
+                <li><span className="font-semibold text-foreground">4.</span> Paste it below</li>
+              </ol>
+            </div>
 
-            <div className="border-t border-border pt-4">
-              <p className="text-sm font-semibold mb-2">Or enter the code from your plugin</p>
-              <div className="flex gap-2">
-                <input
-                  value={pairingCode}
-                  onChange={(e) => setPairingCode(e.target.value.toUpperCase())}
-                  placeholder="ABCD1234"
-                  className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-mono uppercase tracking-widest focus:border-primary focus:outline-none"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5">Pairing code from plugin</label>
+              <input
+                value={pairingCode}
+                onChange={(e) => setPairingCode(e.target.value.toUpperCase())}
+                required
+                placeholder="ABCD1234"
+                maxLength={12}
+                className="w-full rounded-lg border border-border px-4 py-3 text-center text-2xl font-mono uppercase tracking-[0.3em] focus:border-primary focus:outline-none"
+              />
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => setStep('register-station')}
-                className="flex-1 rounded-lg bg-primary py-3 font-bold text-primary-foreground hover:bg-primary/90"
+                type="submit"
+                disabled={loading || pairingCode.length < 4}
+                className="flex-1 rounded-lg bg-primary py-3 font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                Continue to Station Setup
+                {loading ? 'Pairing with plugin...' : 'Pair Store'}
               </button>
               <button
+                type="button"
                 onClick={() => setStep('select-store')}
                 className="rounded-lg border border-border px-4 py-3 text-sm text-muted-foreground hover:bg-muted"
               >
                 Back
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {step === 'register-station' && (

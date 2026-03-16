@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@/lib/supabase/server';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { STORAGE_BUCKET } from '@packagepro/shared';
@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'order_id and station_id required' }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    const supabase = await createClient();
 
-    const { data: lock } = await admin
+    const { data: lock } = await supabase
       .from('order_locks')
       .select('*, orders(*)')
       .eq('order_id', order_id)
@@ -30,14 +30,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order is not locked by this station' }, { status: 403 });
     }
 
-    const order = lock.orders as any;
-    const storagePath = `${order.org_id}/${order.store_id}/${order_id}/${Date.now()}.mp4`;
+    const order = lock.orders as Record<string, unknown>;
+    const orgId = order.org_id as string;
+    const storeId = order.store_id as string;
+    const storagePath = `${orgId}/${storeId}/${order_id}/${Date.now()}.webm`;
 
-    const { data: video, error: videoError } = await admin
+    const { data: video, error: videoError } = await supabase
       .from('videos')
       .insert({
-        org_id: order.org_id,
-        store_id: order.store_id,
+        org_id: orgId,
+        store_id: storeId,
         order_id,
         station_id,
         user_id: user.id,
@@ -51,14 +53,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create video record' }, { status: 500 });
     }
 
-    await admin.from('uploads').insert({
+    await supabase.from('uploads').insert({
       video_id: video.id,
       station_id,
       status: 'pending',
       started_at: new Date().toISOString(),
     });
 
-    const { data: signedUrl, error: signError } = await admin
+    const { data: signedUrl, error: signError } = await supabase
       .storage
       .from(STORAGE_BUCKET)
       .createSignedUploadUrl(storagePath);
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create upload URL' }, { status: 500 });
     }
 
-    await admin.from('orders').update({ video_status: 'uploading' }).eq('id', order_id);
+    await supabase.from('orders').update({ video_status: 'uploading' }).eq('id', order_id);
 
     return NextResponse.json({
       video_id: video.id,

@@ -23,10 +23,6 @@ class PackagePro_Admin {
     }
 
     public static function register_settings() {
-        register_setting('packagepro_settings', 'packagepro_backend_url');
-        register_setting('packagepro_settings', 'packagepro_pairing_code');
-        register_setting('packagepro_settings', 'packagepro_paired');
-        register_setting('packagepro_settings', 'packagepro_store_id');
         register_setting('packagepro_settings', 'packagepro_email_enabled');
     }
 
@@ -86,7 +82,6 @@ class PackagePro_Admin {
         $pairing_code = get_option('packagepro_pairing_code', '');
         $backend_url = get_option('packagepro_backend_url', '');
         $store_id = get_option('packagepro_store_id', '');
-        $webhook_secret = get_option('packagepro_webhook_secret', '');
 
         if (!$pairing_code && !$is_paired) {
             $pairing_code = strtoupper(wp_generate_password(8, false, false));
@@ -95,33 +90,48 @@ class PackagePro_Admin {
         ?>
         <div class="wrap">
             <h1><?php esc_html_e('PackagePro Fulfillment', 'packagepro-fulfillment'); ?></h1>
-            
+
             <?php if (!$is_paired): ?>
-            <div class="packagepro-pairing-section">
-                <h2><?php esc_html_e('Connect to PackagePro Cloud', 'packagepro-fulfillment'); ?></h2>
-                <p><?php esc_html_e('Enter this pairing code in your PackagePro admin portal to connect this store:', 'packagepro-fulfillment'); ?></p>
-                <div class="packagepro-pairing-code">
-                    <code style="font-size: 2em; padding: 10px 20px; background: #f0f0f0; border-radius: 5px;">
+            <div class="card" style="max-width: 600px; padding: 20px; margin-top: 20px;">
+                <h2 style="margin-top: 0;"><?php esc_html_e('Connect to PackagePro', 'packagepro-fulfillment'); ?></h2>
+                <p><?php esc_html_e('Use this pairing code in the PackagePro admin dashboard or desktop app to connect this store:', 'packagepro-fulfillment'); ?></p>
+
+                <div style="background: #f0f0f1; border-radius: 8px; padding: 24px; text-align: center; margin: 16px 0;">
+                    <div style="font-size: 2.5em; font-family: monospace; font-weight: bold; letter-spacing: 0.3em; color: #2271b1;">
                         <?php echo esc_html($pairing_code); ?>
-                    </code>
+                    </div>
+                    <p style="margin: 12px 0 0; color: #646970; font-size: 13px;">
+                        <?php esc_html_e('Enter this code in the "Pair Store" step on packageprotectpro.com or the desktop app', 'packagepro-fulfillment'); ?>
+                    </p>
                 </div>
-                <p>
+
+                <p style="margin-top: 16px;">
                     <button type="button" class="button" id="packagepro-regenerate-code">
                         <?php esc_html_e('Generate New Code', 'packagepro-fulfillment'); ?>
                     </button>
                 </p>
+
+                <div style="margin-top: 20px; padding: 16px; background: #fff8e5; border-left: 4px solid #dba617; border-radius: 2px;">
+                    <strong><?php esc_html_e('Setup steps:', 'packagepro-fulfillment'); ?></strong>
+                    <ol style="margin: 8px 0 0; padding-left: 20px;">
+                        <li><?php esc_html_e('Create an account at packageprotectpro.com', 'packagepro-fulfillment'); ?></li>
+                        <li><?php esc_html_e('Add this store in the admin dashboard or desktop app', 'packagepro-fulfillment'); ?></li>
+                        <li><?php esc_html_e('Enter the pairing code above when prompted', 'packagepro-fulfillment'); ?></li>
+                        <li><?php esc_html_e('This page will show "Connected" once pairing completes', 'packagepro-fulfillment'); ?></li>
+                    </ol>
+                </div>
             </div>
             <?php else: ?>
-            <div class="packagepro-connected-section">
-                <h2><?php esc_html_e('Connection Status', 'packagepro-fulfillment'); ?></h2>
+            <div class="card" style="max-width: 600px; padding: 20px; margin-top: 20px;">
+                <h2 style="margin-top: 0;"><?php esc_html_e('Connection Status', 'packagepro-fulfillment'); ?></h2>
                 <table class="form-table">
                     <tr>
                         <th><?php esc_html_e('Status', 'packagepro-fulfillment'); ?></th>
-                        <td><span class="dashicons dashicons-yes-alt" style="color: green;"></span> <?php esc_html_e('Connected', 'packagepro-fulfillment'); ?></td>
+                        <td><span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span> <?php esc_html_e('Connected', 'packagepro-fulfillment'); ?></td>
                     </tr>
                     <tr>
-                        <th><?php esc_html_e('Backend URL', 'packagepro-fulfillment'); ?></th>
-                        <td><?php echo esc_html($backend_url); ?></td>
+                        <th><?php esc_html_e('Cloud Backend', 'packagepro-fulfillment'); ?></th>
+                        <td><code><?php echo esc_html($backend_url); ?></code></td>
                     </tr>
                     <tr>
                         <th><?php esc_html_e('Store ID', 'packagepro-fulfillment'); ?></th>
@@ -131,32 +141,27 @@ class PackagePro_Admin {
             </div>
             <?php endif; ?>
 
-            <form method="post" action="options.php">
-                <?php settings_fields('packagepro_settings'); ?>
-                <h2><?php esc_html_e('Settings', 'packagepro-fulfillment'); ?></h2>
-                <table class="form-table">
-                    <tr>
-                        <th><?php esc_html_e('Backend URL', 'packagepro-fulfillment'); ?></th>
-                        <td>
-                            <input type="url" name="packagepro_backend_url" value="<?php echo esc_attr($backend_url); ?>" class="regular-text" />
-                            <p class="description"><?php esc_html_e('URL of your PackagePro cloud backend', 'packagepro-fulfillment'); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><?php esc_html_e('Enable Customer Emails', 'packagepro-fulfillment'); ?></th>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="packagepro_email_enabled" value="1" <?php checked(get_option('packagepro_email_enabled', 1)); ?> />
-                                <?php esc_html_e('Send packing video email to customers when ready', 'packagepro-fulfillment'); ?>
-                            </label>
-                        </td>
-                    </tr>
-                </table>
-                <?php submit_button(); ?>
-            </form>
+            <div class="card" style="max-width: 600px; padding: 20px; margin-top: 20px;">
+                <form method="post" action="options.php">
+                    <?php settings_fields('packagepro_settings'); ?>
+                    <h2 style="margin-top: 0;"><?php esc_html_e('Settings', 'packagepro-fulfillment'); ?></h2>
+                    <table class="form-table">
+                        <tr>
+                            <th><?php esc_html_e('Customer Emails', 'packagepro-fulfillment'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="packagepro_email_enabled" value="1" <?php checked(get_option('packagepro_email_enabled', 1)); ?> />
+                                    <?php esc_html_e('Send packing video email to customers when ready', 'packagepro-fulfillment'); ?>
+                                </label>
+                            </td>
+                        </tr>
+                    </table>
+                    <?php submit_button(); ?>
+                </form>
+            </div>
 
-            <h2><?php esc_html_e('Health Check', 'packagepro-fulfillment'); ?></h2>
-            <div id="packagepro-health-status">
+            <div class="card" style="max-width: 600px; padding: 20px; margin-top: 20px;">
+                <h2 style="margin-top: 0;"><?php esc_html_e('Health Check', 'packagepro-fulfillment'); ?></h2>
                 <button type="button" class="button button-secondary" id="packagepro-health-check">
                     <?php esc_html_e('Run Health Check', 'packagepro-fulfillment'); ?>
                 </button>
