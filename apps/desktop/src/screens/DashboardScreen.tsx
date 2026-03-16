@@ -2,12 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { ScannerInput } from '../components/ScannerInput';
 import { StatusBanner } from '../components/StatusBanner';
 import { uploadQueue } from '../lib/upload-queue';
-import { apiCall } from '../lib/api';
+import { api, apiCall } from '../lib/api';
 import { getSupabase } from '../lib/supabase';
 import { STATION_HEARTBEAT_INTERVAL_MS } from '@packagepro/shared';
+import {
+  type DashboardHealthIssue,
+  diagnoseDashboardIssue,
+} from '../lib/dashboard-health';
+import { getDesktopBackendUrl } from '../lib/env';
 
 interface Props {
   stationId: string;
+  onLogout: () => void;
+  onOpenSetup: () => void;
   onStartPacking: (orderId: string) => void;
 }
 
@@ -23,7 +30,7 @@ interface Order {
 
 type Tab = 'orders' | 'search' | 'uploads';
 
-export function DashboardScreen({ stationId, onStartPacking }: Props) {
+export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacking }: Props) {
   const [stationStatus, setStationStatus] = useState<'ready' | 'busy' | 'error'>('ready');
   const [pendingUploads, setPendingUploads] = useState(0);
   const [tab, setTab] = useState<Tab>('orders');
@@ -35,6 +42,9 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
   const [stationName, setStationName] = useState('');
   const [packedToday, setPackedToday] = useState(0);
   const [scanError, setScanError] = useState('');
+  const [stationIssue, setStationIssue] = useState<DashboardHealthIssue | null>(null);
+  const [autoFixing, setAutoFixing] = useState(false);
+  const [orgRole, setOrgRole] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = uploadQueue.subscribe((jobs) => {
@@ -47,39 +57,143 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
     try {
       const name = await window.electronAPI.getConfig('station_name');
       if (typeof name === 'string') setStationName(name);
-      apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }).catch(() => {});
-    } catch { /* skip */ }
+      await api.heartbeat(stationId);
+      setStationStatus('ready');
+      setStationIssue(null);
+    } catch (err) {
+      void handleStationFailure('heartbeat', err);
+    }
   }
+
+  const fetchOrdersAndStats = useCallback(async () => {
+    const orgId = await window.electronAPI.getConfig('org_id') as string;
+    const storeId = await window.electronAPI.getConfig('store_id') as string;
+    if (!orgId) {
+      throw new Error('Missing organization configuration');
+    }
+
+    const params: Record<string, string> = { org_id: orgId, per_page: '50' };
+    if (storeId) params.store_id = storeId;
+    if (orderFilter === 'pending') params.video_status = 'none';
+    if (orderFilter === 'packed') params.video_status = 'ready';
+
+    const res = await apiCall<{ orders: Order[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`);
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const { count } = await getSupabase()
+      .from('videos')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', orgId)
+      .gte('ready_at', startOfDay.toISOString());
+
+    return {
+      orgId,
+      orders: res.orders ?? [],
+      packedToday: count ?? 0,
+    };
+  }, [orderFilter]);
 
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
-      const orgId = await window.electronAPI.getConfig('org_id') as string;
-      const storeId = await window.electronAPI.getConfig('store_id') as string;
-      if (!orgId) return;
-
-      const params: Record<string, string> = { org_id: orgId, per_page: '50' };
-      if (storeId) params.store_id = storeId;
-      if (orderFilter === 'pending') params.video_status = 'none';
-      if (orderFilter === 'packed') params.video_status = 'ready';
-
-      const res = await apiCall<{ orders: Order[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`);
-      setOrders(res.orders ?? []);
-
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const { count } = await getSupabase()
-        .from('videos')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .gte('ready_at', startOfDay.toISOString());
-      setPackedToday(count ?? 0);
-    } catch {
-      setStationStatus('error');
+      const snapshot = await fetchOrdersAndStats();
+      setOrders(snapshot.orders);
+      setPackedToday(snapshot.packedToday);
+      setStationStatus('ready');
+      setStationIssue(null);
+    } catch (err) {
+      await handleStationFailure('orders', err);
     } finally {
       setOrdersLoading(false);
     }
-  }, [orderFilter]);
+  }, [fetchOrdersAndStats]);
+
+  const loadOrgRole = useCallback(async () => {
+    try {
+      const orgId = await window.electronAPI.getConfig('org_id') as string;
+      if (!orgId) return;
+      const { organizations } = await api.listOrganizations();
+      const currentOrg = organizations.find((organization) => organization.id === orgId);
+      setOrgRole(currentOrg?.role ?? null);
+    } catch {
+      setOrgRole(null);
+    }
+  }, []);
+
+  async function handleStationFailure(
+    failedCheck: 'heartbeat' | 'orders',
+    sourceError: unknown
+  ) {
+    setStationStatus('error');
+    setAutoFixing(true);
+
+    const backendUrl = await window.electronAPI.getConfig('backend_url');
+    const orgId = await window.electronAPI.getConfig('org_id') as string;
+    const storeId = await window.electronAPI.getConfig('store_id') as string;
+    const currentStationId = (await window.electronAPI.getConfig('station_id')) as string | null;
+    const { data: { session } } = await getSupabase().auth.getSession();
+
+    if (typeof backendUrl !== 'string' || !backendUrl) {
+      try {
+        await window.electronAPI.setConfigMany({ backend_url: getDesktopBackendUrl() });
+      } catch {
+        setStationIssue(diagnoseDashboardIssue({ missingBackendUrl: true }));
+        setAutoFixing(false);
+        return;
+      }
+    }
+
+    if (!orgId || !storeId || !currentStationId) {
+      setStationIssue(diagnoseDashboardIssue({ missingStationConfig: true }));
+      setAutoFixing(false);
+      return;
+    }
+
+    if (!session) {
+      setStationIssue(diagnoseDashboardIssue({ missingSession: true }));
+      setAutoFixing(false);
+      return;
+    }
+
+    let backendDegraded = false;
+    try {
+      const health = await api.getHealth();
+      backendDegraded = health.status === 'degraded';
+      if (backendDegraded && orgRole && ['org_owner', 'org_admin', 'warehouse_manager'].includes(orgRole)) {
+        await api.runOperationalSelfHeal(orgId).catch(() => {});
+      }
+    } catch {
+      backendDegraded = true;
+    }
+
+    try {
+      await api.heartbeat(currentStationId);
+      const snapshot = await fetchOrdersAndStats();
+      setOrders(snapshot.orders);
+      setPackedToday(snapshot.packedToday);
+      setStationStatus('ready');
+      setStationIssue(null);
+      setAutoFixing(false);
+      return;
+    } catch (recoveryError) {
+      setStationIssue(
+        diagnoseDashboardIssue({
+          missingBackendUrl: typeof backendUrl !== 'string' || !backendUrl,
+          backendDegraded,
+          rawErrorMessage:
+            recoveryError instanceof Error ? recoveryError.message : String(recoveryError ?? sourceError),
+          failedCheck,
+        })
+      );
+    } finally {
+      setAutoFixing(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadOrgRole();
+  }, [loadOrgRole]);
 
   useEffect(() => {
     loadOrders();
@@ -92,8 +206,8 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
   useEffect(() => {
     loadStationInfo();
     const heartbeatInterval = setInterval(() => {
-      apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }).catch(() => {
-        setStationStatus('error');
+      api.heartbeat(stationId).catch((err) => {
+        void handleStationFailure('heartbeat', err);
       });
     }, STATION_HEARTBEAT_INTERVAL_MS);
     return () => {
@@ -147,9 +261,55 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <StatusBanner status={stationStatus} stationName={stationName || `Station ${stationId.slice(0, 8)}`} />
+      <StatusBanner
+        status={stationStatus}
+        stationName={stationName || `Station ${stationId.slice(0, 8)}`}
+        issueCode={stationIssue?.code ?? null}
+        issueSummary={stationIssue?.message ?? null}
+      />
 
       <div className="flex flex-1 flex-col p-6 gap-6 overflow-hidden">
+        {stationIssue && (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-destructive">{stationIssue.title}</p>
+                <p className="text-xs text-destructive/80">Code: {stationIssue.code}</p>
+              </div>
+              {stationIssue.autoFixAvailable && (
+                <button
+                  onClick={() => void handleStationFailure('orders', new Error(stationIssue.message))}
+                  disabled={autoFixing}
+                  className="rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50"
+                >
+                  {autoFixing ? 'Trying Auto-Fix...' : 'Run Auto-Fix'}
+                </button>
+              )}
+            </div>
+            <p className="mt-3 text-destructive">{stationIssue.message}</p>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-destructive/90">
+              {stationIssue.fixSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+            {!stationIssue.autoFixAvailable && stationIssue.code === 'AUTH_SESSION_MISSING' && (
+              <button
+                onClick={onLogout}
+                className="mt-4 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive"
+              >
+                Sign In Again
+              </button>
+            )}
+            {!stationIssue.autoFixAvailable && stationIssue.code === 'CONFIG_STATION_MISSING' && (
+              <button
+                onClick={onOpenSetup}
+                className="mt-4 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive"
+              >
+                Open Setup
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Packing Station</h1>

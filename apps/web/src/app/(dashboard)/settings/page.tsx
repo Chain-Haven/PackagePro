@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ShipStationSettings } from '@/components/settings/shipstation-settings';
+import { SystemHealthPanel } from '@/components/settings/system-health-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,7 @@ export default async function SettingsPage() {
           initialAccounts={(accounts as any[]) || []}
           initialMappings={(mappings as any[]) || []}
         />
+        <SystemHealthPanel orgId={orgId} />
       </div>
     </div>
   );

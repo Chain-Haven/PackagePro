@@ -91,6 +91,8 @@ export function App() {
         {screen === 'dashboard' && config && (
           <DashboardScreen
             stationId={config.stationId}
+            onLogout={handleLogout}
+            onOpenSetup={() => setScreen('setup')}
             onStartPacking={(orderId) => {
               setActiveOrderId(orderId);
               setScreen('packing');

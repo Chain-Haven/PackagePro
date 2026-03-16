@@ -44,6 +44,36 @@ export async function apiCall<T>(path: string, options: ApiOptions = {}): Promis
 }
 
 export const api = {
+  getHealth: () =>
+    apiCall<{
+      status: 'ok' | 'degraded';
+      checks: { supabase: 'ok' | 'error'; cron: 'configured' | 'missing' };
+      timestamp: string;
+    }>('/api/health'),
+
+  getOperationalHealth: (orgId: string) =>
+    apiCall<{
+      status: 'ok' | 'warning' | 'error';
+      checks: Array<{
+        code: string;
+        label: string;
+        status: 'ok' | 'warning' | 'error';
+        message: string;
+        fix: string;
+        autoFixAvailable: boolean;
+      }>;
+      timestamp: string;
+    }>(`/api/admin/health?${new URLSearchParams({ org_id: orgId })}`),
+
+  runOperationalSelfHeal: (orgId: string) =>
+    apiCall<{ success: boolean; result: { expiredLocksReleased: number; offlineStationsUpdated: number; stuckUploadsFailed: number; timestamp: string } }>(
+      '/api/admin/self-heal',
+      {
+        method: 'POST',
+        body: { org_id: orgId },
+      }
+    ),
+
   listOrganizations: () =>
     apiCall<{ organizations: Array<{ id: string; name: string; slug: string; role: string }> }>(
       '/api/organizations'
@@ -110,6 +140,9 @@ export const api = {
       body: { station_id: stationId },
     }),
 
+  heartbeat: (stationId: string) =>
+    apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }),
+
   releaseOrder: (orderId: string, stationId: string) =>
     apiCall(`/api/orders/${orderId}/release`, {
       method: 'POST',
@@ -157,7 +190,4 @@ export const api = {
       label_download_url: string;
       shipment_cost: number;
     }>('/api/shipstation/labels', { method: 'POST', body }),
-
-  heartbeat: (stationId: string) =>
-    apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }),
 };
