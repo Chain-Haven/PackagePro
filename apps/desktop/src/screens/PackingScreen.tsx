@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCamera } from '../hooks/useCamera';
 import { useRecording } from '../hooks/useRecording';
 import { uploadQueue } from '../lib/upload-queue';
@@ -31,9 +31,9 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
   const [labelInfo, setLabelInfo] = useState<LabelInfo | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
 
-  const sessionId = `${orderId}_${Date.now()}`;
+  const sessionIdRef = useRef(`order_${orderId}_${crypto.randomUUID()}`);
   const camera = useCamera();
-  const recording = useRecording(sessionId);
+  const recording = useRecording(sessionIdRef.current);
 
   useEffect(() => {
     initPacking();
@@ -42,7 +42,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
   async function initPacking() {
     try {
-      await api.lockOrder(orderId, stationId);
+      const [orderResponse] = await Promise.all([
+        api.getOrder(orderId),
+        api.lockOrder(orderId, stationId),
+      ]);
+      setOrder(orderResponse.order as OrderData);
       await camera.startPreview();
       setStatus('ready');
     } catch (err) {
@@ -72,7 +76,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
       uploadQueue.enqueue({
         id: `upload_${Date.now()}`,
         videoId: uploadData.video_id,
-        sessionId,
+        sessionId: sessionIdRef.current,
         filePath: result.path,
         fileSize: result.size,
         uploadUrl: uploadData.upload_url,
@@ -126,7 +130,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
     <div className="flex flex-1 flex-col">
       <div className={`flex items-center justify-between px-6 py-3 text-white ${statusColors[status]}`}>
         <span className="text-lg font-bold uppercase">{status}</span>
-        <span className="text-2xl font-mono font-bold">Order #{orderId}</span>
+        <span className="text-2xl font-mono font-bold">Order #{order?.woo_order_number || orderId}</span>
         {status === 'recording' ? <span className="text-lg font-mono">{formatTime(recording.elapsed)}</span> : <span />}
       </div>
 
@@ -159,7 +163,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
             </button>
           )}
           {status === 'recording' && (
-            <button onClick={handleStopRecording} className="rounded-xl bg-red-600 py-6 text-2xl font-bold text-white hover:bg-red-700 transition-colors">
+            <button
+              onClick={handleStopRecording}
+              disabled={items.length > 0 && checkedItems.size !== items.length}
+              className="rounded-xl bg-red-600 py-6 text-2xl font-bold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
               FINISH &amp; SEAL
             </button>
           )}
@@ -180,6 +188,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
           <div className="rounded-xl border border-border bg-muted/50 p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold">Order #{orderId}</h3>
+              {order?.woo_order_number && <span className="text-xs text-muted-foreground">Woo #{order.woo_order_number}</span>}
               {order?.customer_name && <span className="text-xs text-muted-foreground">{order.customer_name}</span>}
             </div>
             {items.length > 0 ? (

@@ -47,6 +47,12 @@ export const api = {
   listOrders: (params: Record<string, string>) =>
     apiCall<{ orders: unknown[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`),
 
+  getOrder: (orderId: string) =>
+    apiCall<{ order: unknown }>(`/api/orders/${orderId}`),
+
+  resolveOrder: (params: Record<string, string>) =>
+    apiCall<{ order: unknown }>(`/api/orders/resolve?${new URLSearchParams(params)}`),
+
   lockOrder: (orderId: string, stationId: string) =>
     apiCall<{ lock_id: string; expires_at: string }>(`/api/orders/${orderId}/lock`, {
       method: 'POST',
