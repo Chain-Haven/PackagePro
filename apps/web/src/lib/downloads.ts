@@ -5,7 +5,7 @@ export type Platform = 'macos' | 'windows' | 'woocommerce';
 
 const ASSET_PATTERNS: Record<Platform, RegExp> = {
   macos: /\.dmg$/i,
-  windows: /\.(exe|msi)$/i,
+  windows: /win.*\.zip$/i,
   woocommerce: /packagepro-fulfillment\.zip$/i,
 };
 
@@ -32,7 +32,7 @@ export async function getLatestRelease(): Promise<GitHubRelease | null> {
     const res = await fetch(
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
       {
-        headers: { Accept: 'application/vnd.github+json' },
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'PackagePro-Web' },
         next: { revalidate: 300 },
       },
     );
@@ -49,9 +49,32 @@ export function findAsset(release: GitHubRelease, platform: Platform): ReleaseAs
   return release.assets.find((a) => ASSET_PATTERNS[platform].test(a.name)) ?? null;
 }
 
+/**
+ * Resolves the final CDN download URL for a GitHub release asset.
+ * GitHub's browser_download_url (github.com/…) 302-redirects to
+ * objects.githubusercontent.com. We follow that redirect server-side
+ * and return the CDN URL so the browser never sees github.com.
+ */
+export async function resolveDirectUrl(githubUrl: string): Promise<string> {
+  try {
+    const res = await fetch(githubUrl, {
+      method: 'HEAD',
+      redirect: 'follow',
+      headers: { 'User-Agent': 'PackagePro-Web' },
+    });
+    if (res.ok && res.url && res.url !== githubUrl) {
+      return res.url;
+    }
+  } catch {
+    // fall through
+  }
+  return githubUrl;
+}
+
 export async function getDownloadUrl(platform: Platform): Promise<string | null> {
   const release = await getLatestRelease();
   if (!release) return null;
   const asset = findAsset(release, platform);
-  return asset?.browser_download_url ?? null;
+  if (!asset) return null;
+  return resolveDirectUrl(asset.browser_download_url);
 }

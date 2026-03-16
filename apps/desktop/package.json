@@ -48,11 +48,11 @@
       "category": "public.app-category.business"
     },
     "win": {
-      "target": ["nsis", "zip"]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "target": [
+        { "target": "zip", "arch": ["x64"] }
+      ],
+      "artifactName": "PackagePro-${version}-win-x64.${ext}",
+      "signAndEditExecutable": false
     },
     "files": [
       "dist/**/*",

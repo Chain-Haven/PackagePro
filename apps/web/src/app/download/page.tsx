@@ -88,6 +88,7 @@ function DownloadCard({
       <p className="mt-2 flex-1 text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: description }} />
       <a
         href={href}
+        download
         className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
       >
         <Download className="h-4 w-4" />

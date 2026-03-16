@@ -567,6 +567,7 @@ function DownloadCard({
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: description }} />
       <a
         href={href}
+        download
         className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90"
       >
         <Download className="h-4 w-4" />
@@ -601,18 +602,21 @@ function CTASection() {
               </Link>
               <a
                 href="/download/desktop/macos"
+                download
                 className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
               >
                 <Apple className="h-4 w-4" /> macOS
               </a>
               <a
                 href="/download/desktop/windows"
+                download
                 className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
               >
                 <Monitor className="h-4 w-4" /> Windows
               </a>
               <a
                 href="/download/plugin/woocommerce"
+                download
                 className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
               >
                 <Package className="h-4 w-4" /> WooCommerce Plugin

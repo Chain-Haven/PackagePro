@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getDownloadUrl } from '@/lib/downloads';
+import { getLatestRelease, findAsset, resolveDirectUrl } from '@/lib/downloads';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const url = await getDownloadUrl('woocommerce');
-  if (!url) {
-    return NextResponse.redirect(
-      new URL('https://github.com/Chain-Haven/PackagePro/releases/latest'),
-    );
+  const release = await getLatestRelease();
+  if (!release) {
+    return NextResponse.json({ error: 'No release found' }, { status: 404 });
   }
-  return NextResponse.redirect(url);
+
+  const asset = findAsset(release, 'woocommerce');
+  if (!asset) {
+    return NextResponse.json({ error: 'WooCommerce plugin not found in latest release' }, { status: 404 });
+  }
+
+  const directUrl = await resolveDirectUrl(asset.browser_download_url);
+
+  return new NextResponse(null, {
+    status: 302,
+    headers: {
+      Location: directUrl,
+      'Content-Disposition': `attachment; filename="${asset.name}"`,
+      'Cache-Control': 'no-cache',
+    },
+  });
 }
