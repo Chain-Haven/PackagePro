@@ -1,4 +1,6 @@
-import { getWebAppUrl } from '@/lib/env';
+import { getHealthSnapshot } from '@/lib/health';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { getWebEnv } from '@/lib/env';
 
 export const metadata = {
   title: 'PackagePro Status',
@@ -17,12 +19,7 @@ type HealthResponse = {
 export const dynamic = 'force-dynamic';
 
 export default async function StatusPage() {
-  const healthResponse = await fetch(`${getWebAppUrl()}/api/health`, {
-    cache: 'no-store',
-  }).catch(() => null);
-  const health = healthResponse && healthResponse.ok
-    ? ((await healthResponse.json()) as HealthResponse)
-    : null;
+  const health = (await getHealthSnapshot(createAdminClient, getWebEnv)) as HealthResponse;
   const statusChecks = [
     { label: 'Platform health', value: health?.status === 'ok' ? 'Operational' : 'Degraded' },
     { label: 'Supabase connectivity', value: health?.checks.supabase === 'ok' ? 'Connected' : 'Unavailable' },
