@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { requireOrgMember, requireOrgRole } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
+import { writeAuditLog } from '@/lib/audit';
+import { getEncryptionKey } from '@/lib/security';
 import { encrypt } from '@packagepro/shared';
 import { z } from 'zod';
 
@@ -14,23 +16,12 @@ const CreateAccountSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const orgId = request.nextUrl.searchParams.get('org_id');
     if (!orgId)
       return NextResponse.json({ error: 'org_id required' }, { status: 400 });
 
+    await requireOrgMember(orgId, request);
     const admin = createAdminClient();
-    const { data: membership } = await admin
-      .from('memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('org_id', orgId)
-      .single();
-
-    if (!membership)
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { data: accounts } = await admin
       .from('shipstation_accounts')
@@ -45,9 +36,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await request.json();
     const parsed = CreateAccountSchema.safeParse(body);
     if (!parsed.success) {
@@ -57,21 +45,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { user } = await requireOrgRole(
+      parsed.data.org_id,
+      ['org_owner', 'org_admin'],
+      request
+    );
     const admin = createAdminClient();
-    const { data: membership } = await admin
-      .from('memberships')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('org_id', parsed.data.org_id)
-      .single();
-
-    if (!membership || !['org_owner', 'org_admin'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey)
-      return NextResponse.json({ error: 'Server config error' }, { status: 500 });
+    const encryptionKey = getEncryptionKey();
 
     const encrypted = encrypt(
       `${parsed.data.api_key}:${parsed.data.api_secret}`,
@@ -92,6 +72,18 @@ export async function POST(request: NextRequest) {
     if (error || !account) {
       return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
     }
+
+    await writeAuditLog({
+      admin,
+      orgId: parsed.data.org_id,
+      actorId: user.id,
+      actorType: 'user',
+      action: 'shipstation_account_created',
+      resourceType: 'shipstation_account',
+      resourceId: account.id,
+      details: { label: account.label },
+      request,
+    });
 
     return NextResponse.json({ account }, { status: 201 });
   } catch (err) {

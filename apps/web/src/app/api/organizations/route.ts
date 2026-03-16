@@ -9,9 +9,9 @@ const CreateOrgSchema = z.object({
   slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const memberships = await getUserMemberships(user.id);
@@ -26,7 +26,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await getAuthenticatedUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();

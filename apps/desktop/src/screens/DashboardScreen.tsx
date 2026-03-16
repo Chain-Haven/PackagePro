@@ -4,6 +4,7 @@ import { StatusBanner } from '../components/StatusBanner';
 import { uploadQueue } from '../lib/upload-queue';
 import { apiCall } from '../lib/api';
 import { getSupabase } from '../lib/supabase';
+import { STATION_HEARTBEAT_INTERVAL_MS } from '@packagepro/shared';
 
 interface Props {
   stationId: string;
@@ -33,6 +34,7 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
   const [searchResults, setSearchResults] = useState<Order[]>([]);
   const [stationName, setStationName] = useState('');
   const [packedToday, setPackedToday] = useState(0);
+  const [scanError, setScanError] = useState('');
 
   useEffect(() => {
     const unsub = uploadQueue.subscribe((jobs) => {
@@ -45,7 +47,15 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
     loadOrders();
     loadStationInfo();
     const interval = setInterval(loadOrders, 30000);
-    return () => clearInterval(interval);
+    const heartbeatInterval = setInterval(() => {
+      apiCall(`/api/stations/${stationId}/heartbeat`, { method: 'POST' }).catch(() => {
+        setStationStatus('error');
+      });
+    }, STATION_HEARTBEAT_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
+      clearInterval(heartbeatInterval);
+    };
   }, [orderFilter]);
 
   async function loadStationInfo() {
@@ -71,9 +81,14 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
       const res = await apiCall<{ orders: Order[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`);
       setOrders(res.orders ?? []);
 
-      const todayParams = { org_id: orgId, video_status: 'ready', per_page: '1' };
-      const todayRes = await apiCall<{ total: number }>(`/api/orders?${new URLSearchParams(todayParams)}`);
-      setPackedToday(todayRes.total ?? 0);
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const { count } = await getSupabase()
+        .from('videos')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .gte('ready_at', startOfDay.toISOString());
+      setPackedToday(count ?? 0);
     } catch {
       setStationStatus('error');
     } finally {
@@ -91,8 +106,33 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
     } catch { /* skip */ }
   }
 
-  function handleScan(barcode: string) {
-    onStartPacking(barcode);
+  async function handleScan(barcode: string) {
+    setScanError('');
+    try {
+      const orgId = await window.electronAPI.getConfig('org_id') as string;
+      const storeId = await window.electronAPI.getConfig('store_id') as string;
+      if (!orgId) {
+        setScanError('Station is missing its organization configuration');
+        return;
+      }
+
+      const res = await apiCall<{ order?: Order }>(
+        `/api/orders/resolve?${new URLSearchParams({
+          org_id: orgId,
+          ...(storeId ? { store_id: storeId } : {}),
+          scan: barcode,
+        })}`
+      );
+
+      if (!res.order?.id) {
+        setScanError(`No order found for scan: ${barcode}`);
+        return;
+      }
+
+      onStartPacking(res.order.id);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : 'Failed to resolve scanned order');
+    }
   }
 
   const videoStatusBadge = (vs: string) => {
@@ -112,6 +152,11 @@ export function DashboardScreen({ stationId, onStartPacking }: Props) {
           </div>
           <ScannerInput onScan={handleScan} />
         </div>
+        {scanError && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-2 text-sm text-destructive">
+            {scanError}
+          </div>
+        )}
 
         <div className="grid grid-cols-4 gap-4">
           <StatCard label="Orders in Queue" value={String(orders.length)} />
@@ -209,6 +254,7 @@ function UploadQueueTab() {
           <div>
             <p className="text-sm font-medium">{j.videoId.slice(0, 12)}...</p>
             <p className="text-xs text-muted-foreground">Attempt {j.attempts} — {j.status}</p>
+            {j.lastError && <p className="text-xs text-destructive">{j.lastError}</p>}
           </div>
           <div className="flex items-center gap-2">
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${j.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : j.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>{j.status}</span>

@@ -86,25 +86,7 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
 
     const store = (storeList ?? [])[0];
     setSelectedStore(store);
-
-    const { data: stations } = await supabase
-      .from('stations')
-      .select('id, name, status')
-      .eq('org_id', org.id)
-      .eq('store_id', store.id);
-
-    if ((stations ?? []).length > 0) {
-      const station = stations![0];
-      await window.electronAPI.setConfig('backend_url', backendUrl);
-      await window.electronAPI.setConfig('org_id', org.id);
-      await window.electronAPI.setConfig('store_id', store.id);
-      await window.electronAPI.setConfig('station_id', station.id);
-      await window.electronAPI.setConfig('station_name', station.name);
-      onComplete({ orgId: org.id, storeId: store.id, stationId: station.id });
-      return;
-    }
-
-    setStep('register-station');
+    setStep('select-store');
   }, [backendUrl, onComplete]);
 
   useEffect(() => {

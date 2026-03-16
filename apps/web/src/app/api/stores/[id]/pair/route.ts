@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStoreAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
+import { buildExternalUrl, enforceRateLimit, getEncryptionKey } from '@/lib/security';
+import { getWebAppUrl } from '@/lib/env';
+import { writeAuditLog } from '@/lib/audit';
+import {
+  encryptIfNeeded,
+  generatePairingCode,
+  PAIRING_RATE_LIMIT_PER_HOUR,
+  PAIRING_RATE_LIMIT_WINDOW_SECONDS,
+} from '@packagepro/shared';
+import { z } from 'zod';
+
+const PairStoreBodySchema = z.object({
+  pairing_code: z.string().trim().min(6).max(64),
+});
 
 export async function POST(
   request: NextRequest,
@@ -9,35 +23,36 @@ export async function POST(
 ) {
   try {
     const { id: storeId } = await params;
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { store, user, admin } = await requireStoreAccess(storeId, request, [
+      'org_owner',
+      'org_admin',
+    ]);
+
+    await enforceRateLimit(
+      request,
+      'store-pair',
+      `${user.id}:${storeId}`,
+      PAIRING_RATE_LIMIT_PER_HOUR,
+      PAIRING_RATE_LIMIT_WINDOW_SECONDS
+    );
 
     const body = await request.json();
-    const { pairing_code } = body;
-
-    if (!pairing_code || typeof pairing_code !== 'string') {
-      return NextResponse.json({ error: 'pairing_code is required' }, { status: 400 });
+    const parsedBody = PairStoreBodySchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsedBody.error.flatten() },
+        { status: 400 }
+      );
     }
-
-    const supabase = await createClient();
-
-    const { data: store } = await supabase
-      .from('stores')
-      .select('*')
-      .eq('id', storeId)
-      .single();
-
-    if (!store) return NextResponse.json({ error: 'Store not found' }, { status: 404 });
 
     if (!store.url) {
       return NextResponse.json({ error: 'Store URL not set' }, { status: 400 });
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_APP_URL
-      || process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`
-      || 'https://packageprotectpro.com';
-
-    const pluginPairUrl = `${store.url.replace(/\/+$/, '')}/wp-json/packagepro/v1/pair`;
+    const backendUrl = getWebAppUrl();
+    const pluginPairUrl = buildExternalUrl(store.url, '/wp-json/packagepro/v1/pair', {
+      allowHttpLocalhost: process.env.NODE_ENV !== 'production',
+    });
 
     let pluginResponse: Response;
     try {
@@ -45,7 +60,7 @@ export async function POST(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pairing_code: pairing_code.toUpperCase(),
+          pairing_code: parsedBody.data.pairing_code.toUpperCase(),
           backend_url: backendUrl,
           store_id: storeId,
         }),
@@ -81,20 +96,21 @@ export async function POST(
     const updateFields: Record<string, unknown> = {
       paired_at: new Date().toISOString(),
       sync_status: 'synced',
-      pairing_code: null,
+      pairing_code: generatePairingCode(),
     };
+    const encryptionKey = getEncryptionKey();
 
     if (pluginData.consumer_key) {
-      updateFields.consumer_key_encrypted = pluginData.consumer_key;
+      updateFields.consumer_key_encrypted = encryptIfNeeded(pluginData.consumer_key, encryptionKey);
     }
     if (pluginData.consumer_secret) {
-      updateFields.consumer_secret_encrypted = pluginData.consumer_secret;
+      updateFields.consumer_secret_encrypted = encryptIfNeeded(pluginData.consumer_secret, encryptionKey);
     }
     if (pluginData.webhook_secret) {
-      updateFields.webhook_secret = pluginData.webhook_secret;
+      updateFields.webhook_secret = encryptIfNeeded(pluginData.webhook_secret, encryptionKey);
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await admin
       .from('stores')
       .update(updateFields)
       .eq('id', storeId);
@@ -102,6 +118,18 @@ export async function POST(
     if (updateError) {
       return NextResponse.json({ error: 'Store updated on plugin but failed to save locally' }, { status: 500 });
     }
+
+    await writeAuditLog({
+      admin,
+      orgId: store.org_id,
+      actorId: user.id,
+      actorType: 'user',
+      action: 'store_paired',
+      resourceType: 'store',
+      resourceId: storeId,
+      details: { store_name: pluginData.store_name ?? store.name },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

@@ -2,6 +2,13 @@
 defined('ABSPATH') || exit;
 
 class PackagePro_Webhooks {
+    private static function log_webhook_result($message) {
+        update_option('packagepro_last_webhook_error', $message);
+        update_option('packagepro_last_webhook_attempt_at', current_time('c'));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PackagePro] ' . $message);
+        }
+    }
 
     public static function init() {
         add_action('woocommerce_new_order', [__CLASS__, 'on_order_created'], 10, 2);
@@ -78,7 +85,7 @@ class PackagePro_Webhooks {
         $timestamp = time();
         $signature = hash_hmac('sha256', $timestamp . '.' . $body, $secret);
 
-        wp_remote_post($backend_url . '/api/webhooks/woo/' . $store_id, [
+        $response = wp_remote_post($backend_url . '/api/webhooks/woo/' . $store_id, [
             'body' => $body,
             'headers' => [
                 'Content-Type' => 'application/json',
@@ -89,5 +96,12 @@ class PackagePro_Webhooks {
             'timeout' => 15,
             'blocking' => false,
         ]);
+
+        if (is_wp_error($response)) {
+            self::log_webhook_result('Webhook delivery failed: ' . $response->get_error_message());
+        } else {
+            update_option('packagepro_last_webhook_error', '');
+            update_option('packagepro_last_webhook_attempt_at', current_time('c'));
+        }
     }
 }

@@ -178,6 +178,7 @@ export const StoreSettingsSchema = z.object({
   email_enabled: z.boolean().default(true),
   email_template: z.record(z.unknown()).default({}),
   retention_days: z.number().int().default(90),
+  viewer_token_ttl_days: z.number().int().default(90),
   require_secondary_verification: z.boolean().default(false),
   auto_record_on_scan: z.boolean().default(false),
   feature_flags: z.record(z.boolean()).default({}),

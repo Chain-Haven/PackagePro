@@ -15,34 +15,38 @@ export class ShipStationV2Client {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.rateLimiter = new RateLimiter(200);
+    this.rateLimiter = new RateLimiter(200, `shipstation-v2:${apiKey}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    await this.rateLimiter.acquire();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await this.rateLimiter.acquire();
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        'API-Key': this.apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          'API-Key': this.apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    if (res.status === 429) {
-      const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
-      const jitter = Math.random() * 1000;
-      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + jitter));
-      return this.request(method, path, body);
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
+        const jitter = Math.random() * 1000;
+        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + jitter));
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`ShipStation V2 ${method} ${path} failed: ${res.status} ${text}`);
+      }
+
+      return res.json() as Promise<T>;
     }
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`ShipStation V2 ${method} ${path} failed: ${res.status} ${text}`);
-    }
-
-    return res.json() as Promise<T>;
+    throw new Error(`ShipStation V2 ${method} ${path} exhausted retry budget`);
   }
 
   async listCarriers(): Promise<{ carriers: V2Carrier[] }> {

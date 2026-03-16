@@ -28,10 +28,14 @@ export default async function DashboardPage() {
     redirect('/onboarding');
   }
 
-  const [{ count: storeCount }, { count: stationCount }, { count: orderCount }, { count: videoCount }, { data: stores }, { data: stations }] =
+  const [{ count: storeCount }, { data: activeStations }, { count: orderCount }, { count: videoCount }, { data: stores }, { data: stations }] =
     await Promise.all([
       supabase.from('stores').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-      supabase.from('stations').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
+      supabase
+        .from('stations')
+        .select('id, last_heartbeat, status')
+        .eq('org_id', organization.id)
+        .eq('status', 'online'),
       supabase.from('orders').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
       supabase.from('videos').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
       supabase
@@ -47,6 +51,10 @@ export default async function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(3),
     ]);
+  const activeCutoff = Date.now() - 2 * 60 * 1000;
+  const activeStationCount = ((activeStations as any[]) || []).filter(
+    (station) => station.last_heartbeat && new Date(station.last_heartbeat).getTime() >= activeCutoff
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -61,7 +69,7 @@ export default async function DashboardPage() {
 
       <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard title="Connected Stores" value={String(storeCount ?? 0)} />
-        <DashboardCard title="Active Stations" value={String(stationCount ?? 0)} />
+        <DashboardCard title="Active Stations" value={String(activeStationCount)} />
         <DashboardCard title="Orders Synced" value={String(orderCount ?? 0)} />
         <DashboardCard title="Videos Recorded" value={String(videoCount ?? 0)} />
       </div>

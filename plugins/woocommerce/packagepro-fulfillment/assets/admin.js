@@ -1,6 +1,10 @@
 (function($) {
     'use strict';
 
+    function escapeHtml(value) {
+        return $('<div>').text(String(value)).html();
+    }
+
     $('#packagepro-regenerate-code').on('click', function() {
         var $btn = $(this);
         $btn.prop('disabled', true).text('Generating...');
@@ -33,7 +37,7 @@
         $.get(packageproAdmin.rest_url + 'health', function(data) {
             var html = '<div class="packagepro-health-results">';
             for (var key in data) {
-                html += '<div class="health-item"><strong>' + key + ':</strong> ' + data[key] + '</div>';
+                html += '<div class="health-item"><strong>' + escapeHtml(key) + ':</strong> ' + escapeHtml(data[key]) + '</div>';
             }
             html += '</div>';
             $results.html(html);

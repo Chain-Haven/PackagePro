@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { handleApiError } from '@/lib/api-utils';
-import { hashToken, STORAGE_BUCKET, VIDEO_SIGNED_URL_EXPIRY_SECONDS } from '@packagepro/shared';
+import { getRequestIp, handleApiError } from '@/lib/api-utils';
+import { enforceRateLimit } from '@/lib/security';
+import {
+  hashToken,
+  STORAGE_BUCKET,
+  VIDEO_SIGNED_URL_EXPIRY_SECONDS,
+  VIEWER_RATE_LIMIT_PER_MIN,
+} from '@packagepro/shared';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +15,7 @@ export async function GET(
 ) {
   try {
     const { token } = await params;
+    await enforceRateLimit(request, 'viewer-token', token, VIEWER_RATE_LIMIT_PER_MIN, 60);
 
     const tokenHash = hashToken(token);
     const admin = createAdminClient();
@@ -60,8 +67,7 @@ export async function GET(
     await admin.from('video_access_logs').insert({
       video_id: video.id,
       token_id: accessToken.id,
-      ip_address:
-        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ip_address: getRequestIp(request),
       user_agent: request.headers.get('user-agent') || null,
       verified: true,
     });

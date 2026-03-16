@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCamera } from '../hooks/useCamera';
 import { useRecording } from '../hooks/useRecording';
 import { uploadQueue } from '../lib/upload-queue';
@@ -22,6 +22,7 @@ interface OrderData {
   line_items: Array<{ name: string; quantity: number }>;
   order_total: string;
   video_status: string;
+  preferred_shipstation_account_id?: string | null;
 }
 
 export function PackingScreen({ orderId, stationId, onFinish }: Props) {
@@ -30,19 +31,42 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
   const [error, setError] = useState('');
   const [labelInfo, setLabelInfo] = useState<LabelInfo | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
+  const [uploadJobId, setUploadJobId] = useState<string | null>(null);
+  const [uploadJobStatus, setUploadJobStatus] = useState<'idle' | 'pending' | 'uploading' | 'finalizing' | 'completed' | 'failed'>('idle');
 
-  const sessionId = `${orderId}_${Date.now()}`;
+  const sessionIdRef = useRef(`order_${orderId}_${crypto.randomUUID()}`);
   const camera = useCamera();
-  const recording = useRecording(sessionId);
+  const recording = useRecording(sessionIdRef.current);
 
   useEffect(() => {
     initPacking();
     return () => { camera.stopPreview(); };
   }, []);
 
+  useEffect(() => {
+    if (!uploadJobId) return;
+    return uploadQueue.subscribe((jobs) => {
+      const job = jobs.find((entry) => entry.id === uploadJobId);
+      if (!job) return;
+
+      setUploadJobStatus(job.status);
+      if (job.status === 'failed') {
+        setError(job.lastError || 'Upload failed. Retry from the upload queue before continuing.');
+      }
+
+      if (job.status === 'completed' && labelInfo) {
+        setStatus('done');
+      }
+    });
+  }, [uploadJobId, labelInfo]);
+
   async function initPacking() {
     try {
-      await api.lockOrder(orderId, stationId);
+      const [orderResponse] = await Promise.all([
+        api.getOrder(orderId),
+        api.lockOrder(orderId, stationId),
+      ]);
+      setOrder(orderResponse.order as OrderData);
       await camera.startPreview();
       setStatus('ready');
     } catch (err) {
@@ -69,15 +93,17 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
     try {
       const uploadData = await api.requestUploadUrl(orderId, stationId);
-      uploadQueue.enqueue({
+      const queuedJobId = await uploadQueue.enqueue({
         id: `upload_${Date.now()}`,
         videoId: uploadData.video_id,
-        sessionId,
+        sessionId: sessionIdRef.current,
         filePath: result.path,
         fileSize: result.size,
         uploadUrl: uploadData.upload_url,
         uploadToken: uploadData.token,
       });
+      setUploadJobId(queuedJobId);
+      setUploadJobStatus('pending');
       setStatus('shipping');
     } catch (err) {
       setError(`Upload setup failed: ${err}`);
@@ -87,7 +113,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
   function handleLabelCreated(label: LabelInfo) {
     setLabelInfo(label);
-    setStatus('done');
+    if (uploadJobStatus === 'completed') {
+      setStatus('done');
+    } else {
+      setStatus('shipping');
+    }
   }
 
   async function handleFinish() {
@@ -126,7 +156,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
     <div className="flex flex-1 flex-col">
       <div className={`flex items-center justify-between px-6 py-3 text-white ${statusColors[status]}`}>
         <span className="text-lg font-bold uppercase">{status}</span>
-        <span className="text-2xl font-mono font-bold">Order #{orderId}</span>
+        <span className="text-2xl font-mono font-bold">Order #{order?.woo_order_number || orderId}</span>
         {status === 'recording' ? <span className="text-lg font-mono">{formatTime(recording.elapsed)}</span> : <span />}
       </div>
 
@@ -159,7 +189,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
             </button>
           )}
           {status === 'recording' && (
-            <button onClick={handleStopRecording} className="rounded-xl bg-red-600 py-6 text-2xl font-bold text-white hover:bg-red-700 transition-colors">
+            <button
+              onClick={handleStopRecording}
+              disabled={items.length > 0 && checkedItems.size !== items.length}
+              className="rounded-xl bg-red-600 py-6 text-2xl font-bold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
               FINISH &amp; SEAL
             </button>
           )}
@@ -180,6 +214,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
           <div className="rounded-xl border border-border bg-muted/50 p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-lg font-bold">Order #{orderId}</h3>
+              {order?.woo_order_number && <span className="text-xs text-muted-foreground">Woo #{order.woo_order_number}</span>}
               {order?.customer_name && <span className="text-xs text-muted-foreground">{order.customer_name}</span>}
             </div>
             {items.length > 0 ? (
@@ -205,12 +240,25 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
           </div>
 
           {(status === 'shipping' || status === 'done') && (
-            <ShippingPanel
-              orderId={orderId}
-              stationId={stationId}
-              shippingAddress={order?.shipping_address}
-              onLabelCreated={handleLabelCreated}
-            />
+            <>
+              {uploadJobId && (
+                <div className="rounded-xl border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+                  Upload status: <span className="font-semibold text-foreground">{uploadJobStatus}</span>
+                  {uploadJobStatus !== 'completed' && ' — the bench will advance after finalize completes.'}
+                </div>
+              )}
+              <ShippingPanel
+                orderId={orderId}
+                stationId={stationId}
+                shippingAddress={order?.shipping_address}
+                onLabelCreated={handleLabelCreated}
+                onLabelVoided={() => {
+                  setLabelInfo(null);
+                  setStatus('shipping');
+                }}
+                preferredAccountId={order?.preferred_shipstation_account_id}
+              />
+            </>
           )}
 
           {labelInfo && status === 'done' && (
