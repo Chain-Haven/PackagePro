@@ -39,7 +39,12 @@ export async function GET(request: NextRequest) {
     if (storeId) query = query.eq('store_id', storeId);
     if (status) query = query.eq('status', status);
     if (videoStatus) query = query.eq('video_status', videoStatus);
-    if (search) query = query.or(`woo_order_number.ilike.%${search}%,customer_name.ilike.%${search}%,customer_email.ilike.%${search}%`);
+    if (search) {
+      const sanitized = search.replace(/[%_\\]/g, '').replace(/[^\w\s@.-]/g, '').slice(0, 100);
+      if (sanitized) {
+        query = query.or(`woo_order_number.ilike.%${sanitized}%,customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%`);
+      }
+    }
 
     const { data: orders, count, error } = await query;
 

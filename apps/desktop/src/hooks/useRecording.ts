@@ -20,8 +20,8 @@ export function useRecording(sessionId: string) {
   const start = useCallback(
     async (stream: MediaStream) => {
       streamRef.current = stream;
-
-      const recorder = new MediaRecorder(stream, {
+      const videoOnly = new MediaStream(stream.getVideoTracks());
+      const recorder = new MediaRecorder(videoOnly, {
         mimeType: 'video/webm;codecs=vp8',
         videoBitsPerSecond: 2_500_000,
       });

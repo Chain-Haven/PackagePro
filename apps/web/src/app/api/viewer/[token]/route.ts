@@ -66,13 +66,15 @@ export async function GET(
       verified: true,
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       playback_url: signedUrl.signedUrl,
       order_number: order?.woo_order_number,
       store_name: (order?.stores as Record<string, string>)?.name || 'Store',
       recorded_at: video.ready_at,
       requires_verification: false,
     });
+    response.headers.set('Cache-Control', 'private, no-store, max-age=0');
+    return response;
   } catch (err) {
     return handleApiError(err);
   }

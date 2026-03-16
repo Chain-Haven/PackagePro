@@ -3,6 +3,7 @@ import { useCamera } from '../hooks/useCamera';
 import { useRecording } from '../hooks/useRecording';
 import { uploadQueue } from '../lib/upload-queue';
 import { api } from '../lib/api';
+import { ShippingPanel, type LabelInfo } from '../components/ShippingPanel';
 
 interface Props {
   orderId: string;
@@ -10,25 +11,25 @@ interface Props {
   onFinish: () => void;
 }
 
-type PackingStatus =
-  | 'loading'
-  | 'ready'
-  | 'recording'
-  | 'processing'
-  | 'shipping'
-  | 'uploading'
-  | 'done'
-  | 'error';
+type PackingStatus = 'loading' | 'ready' | 'recording' | 'processing' | 'shipping' | 'done' | 'error';
+
+interface OrderData {
+  id: string;
+  woo_order_number: string;
+  customer_name: string;
+  customer_email: string;
+  shipping_address: Record<string, string>;
+  line_items: Array<{ name: string; quantity: number }>;
+  order_total: string;
+  video_status: string;
+}
 
 export function PackingScreen({ orderId, stationId, onFinish }: Props) {
   const [status, setStatus] = useState<PackingStatus>('loading');
-  const [orderDetails, setOrderDetails] = useState<unknown>(null);
+  const [order, setOrder] = useState<OrderData | null>(null);
   const [error, setError] = useState('');
-  const [labelInfo, setLabelInfo] = useState<{
-    tracking_number?: string;
-    label_download_url?: string;
-    shipment_cost?: number;
-  } | null>(null);
+  const [labelInfo, setLabelInfo] = useState<LabelInfo | null>(null);
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
 
   const sessionId = `${orderId}_${Date.now()}`;
   const camera = useCamera();
@@ -36,20 +37,13 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
   useEffect(() => {
     initPacking();
-    return () => {
-      camera.stopPreview();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only on mount
+    return () => { camera.stopPreview(); };
   }, []);
 
   async function initPacking() {
     try {
-      // Lock order
-      await api.lockOrder(orderId, stationId || 'desktop-1');
-
-      // Start camera
+      await api.lockOrder(orderId, stationId);
       await camera.startPreview();
-
       setStatus('ready');
     } catch (err) {
       setError(String(err));
@@ -73,11 +67,8 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
       return;
     }
 
-    // Request upload URL from backend
     try {
-      const uploadData = await api.requestUploadUrl(orderId, stationId || 'desktop-1');
-
-      // Enqueue upload
+      const uploadData = await api.requestUploadUrl(orderId, stationId);
       uploadQueue.enqueue({
         id: `upload_${Date.now()}`,
         videoId: uploadData.video_id,
@@ -87,7 +78,6 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
         uploadUrl: uploadData.upload_url,
         uploadToken: uploadData.token,
       });
-
       setStatus('shipping');
     } catch (err) {
       setError(`Upload setup failed: ${err}`);
@@ -95,45 +85,28 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
     }
   }
 
-  async function handleCreateLabel() {
-    try {
-      const label = await api.createLabel({
-        order_id: orderId,
-        carrier_id: 'default',
-        service_code: 'usps_priority_mail',
-        packages: [{ weight: { value: 16, unit: 'ounce' } }],
-      });
-
-      setLabelInfo(label);
-      setStatus('done');
-    } catch (err) {
-      setError(`Label creation failed: ${err}`);
-      setStatus('done');
-    }
-  }
-
-  async function handlePrintLabel() {
-    if (!labelInfo?.label_download_url) return;
-    await window.electronAPI.printLabel({ url: labelInfo.label_download_url });
+  function handleLabelCreated(label: LabelInfo) {
+    setLabelInfo(label);
+    setStatus('done');
   }
 
   async function handleFinish() {
-    try {
-      await api.releaseOrder(orderId, stationId || 'desktop-1');
-    } catch {
-      // ignore
-    }
+    try { await api.releaseOrder(orderId, stationId); } catch { /* ok */ }
     onFinish();
   }
 
   async function handleCancel() {
     recording.cancel();
-    try {
-      await api.releaseOrder(orderId, stationId || 'desktop-1');
-    } catch {
-      // ignore
-    }
+    try { await api.releaseOrder(orderId, stationId); } catch { /* ok */ }
     onFinish();
+  }
+
+  function toggleItem(idx: number) {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
+    });
   }
 
   function formatTime(s: number) {
@@ -143,150 +116,111 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
   }
 
   const statusColors: Record<PackingStatus, string> = {
-    loading: 'bg-muted',
-    ready: 'bg-primary',
-    recording: 'bg-recording animate-pulse',
-    processing: 'bg-warning',
-    shipping: 'bg-primary',
-    uploading: 'bg-warning',
-    done: 'bg-success',
-    error: 'bg-destructive',
+    loading: 'bg-muted text-foreground', ready: 'bg-primary', recording: 'bg-red-600 animate-pulse',
+    processing: 'bg-amber-500', shipping: 'bg-primary', done: 'bg-emerald-600', error: 'bg-destructive',
   };
+
+  const items = order?.line_items ?? [];
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* Status bar */}
-      <div
-        className={`flex items-center justify-between px-6 py-3 text-white ${statusColors[status]}`}
-      >
+      <div className={`flex items-center justify-between px-6 py-3 text-white ${statusColors[status]}`}>
         <span className="text-lg font-bold uppercase">{status}</span>
         <span className="text-2xl font-mono font-bold">Order #{orderId}</span>
-        {status === 'recording' && (
-          <span className="text-lg font-mono">{formatTime(recording.elapsed)}</span>
-        )}
-        {status !== 'recording' && <span />}
+        {status === 'recording' ? <span className="text-lg font-mono">{formatTime(recording.elapsed)}</span> : <span />}
       </div>
 
-      {error && (
-        <div className="bg-destructive/10 px-6 py-2 text-sm text-destructive">{error}</div>
-      )}
+      {error && <div className="bg-destructive/10 px-6 py-2 text-sm text-destructive">{error}</div>}
 
-      <div className="flex flex-1 gap-4 p-4">
-        {/* Camera */}
-        <div className="flex-1 rounded-xl border-2 border-border overflow-hidden bg-black relative">
-          <video
-            ref={camera.videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-          />
-          {status === 'recording' && (
-            <div className="absolute top-4 right-4 flex items-center gap-2 rounded-full bg-recording px-4 py-2">
-              <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
-              <span className="text-sm font-bold text-white">
-                REC {formatTime(recording.elapsed)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Side panel */}
-        <div className="w-96 flex flex-col gap-4">
-          {/* Order info */}
-          <div className="rounded-xl border border-border bg-muted p-4">
-            <h3 className="text-lg font-bold mb-2">Order #{orderId}</h3>
-            {orderDetails
-              ? (
-                  orderDetails as { line_items?: Array<{ name: string; quantity: number }> }
-                ).line_items?.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between py-1 text-sm border-b border-border last:border-0"
-                  >
-                    <span>{item.name}</span>
-                    <span className="font-mono">x{item.quantity}</span>
-                  </div>
-                )) ?? <p className="text-sm text-muted-foreground">No items</p>
-              : (
-                  <p className="text-sm text-muted-foreground">Loading order details...</p>
-                )}
+      <div className="flex flex-1 gap-4 p-4 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-3">
+          <div className="flex-1 rounded-xl border-2 border-border overflow-hidden bg-black relative min-h-0">
+            <video ref={camera.videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+            {status === 'recording' && (
+              <div className="absolute top-4 right-4 flex items-center gap-2 rounded-full bg-red-600 px-4 py-2">
+                <div className="h-3 w-3 rounded-full bg-white animate-pulse" />
+                <span className="text-sm font-bold text-white">REC {formatTime(recording.elapsed)}</span>
+              </div>
+            )}
+            {camera.devices.length > 1 && status === 'ready' && (
+              <select
+                value={camera.selectedDeviceId}
+                onChange={(e) => { camera.setSelectedDeviceId(e.target.value); camera.startPreview(e.target.value); }}
+                className="absolute bottom-3 left-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs text-white border border-white/20"
+              >
+                {camera.devices.map((d) => <option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(0, 8)}`}</option>)}
+              </select>
+            )}
           </div>
 
-          {/* Label info */}
-          {labelInfo && (
-            <div className="rounded-xl border border-success/30 bg-success/10 p-4">
-              <h3 className="text-sm font-bold text-success mb-1">Label Created</h3>
-              <p className="text-xs font-mono">{labelInfo.tracking_number}</p>
-              <p className="text-xs text-muted-foreground">
-                ${labelInfo.shipment_cost?.toFixed(2)}
-              </p>
-              <button
-                onClick={handlePrintLabel}
-                className="mt-2 w-full rounded-lg bg-primary py-2 text-sm font-bold text-white"
-              >
-                REPRINT LABEL
-              </button>
-            </div>
-          )}
-
-          <div className="flex-1" />
-
-          {/* Action buttons */}
           {status === 'ready' && (
-            <button
-              onClick={handleStartRecording}
-              className="rounded-xl bg-success py-8 text-3xl font-bold text-white hover:bg-success/90 transition-colors"
-            >
+            <button onClick={handleStartRecording} className="rounded-xl bg-emerald-600 py-6 text-2xl font-bold text-white hover:bg-emerald-700 transition-colors">
               START RECORDING
             </button>
           )}
-
           {status === 'recording' && (
-            <button
-              onClick={handleStopRecording}
-              className="rounded-xl bg-recording py-8 text-3xl font-bold text-white hover:bg-recording/90 transition-colors"
-            >
+            <button onClick={handleStopRecording} className="rounded-xl bg-red-600 py-6 text-2xl font-bold text-white hover:bg-red-700 transition-colors">
               FINISH &amp; SEAL
             </button>
           )}
-
-          {status === 'shipping' && (
-            <button
-              onClick={handleCreateLabel}
-              className="rounded-xl bg-primary py-8 text-3xl font-bold text-white hover:bg-primary/90 transition-colors"
-            >
-              CREATE &amp; PRINT LABEL
-            </button>
+          {(status === 'processing') && (
+            <div className="rounded-xl bg-muted py-6 text-center"><p className="text-lg font-bold text-amber-600 animate-pulse">Processing video...</p></div>
           )}
-
           {status === 'done' && (
-            <button
-              onClick={handleFinish}
-              className="rounded-xl bg-success py-8 text-3xl font-bold text-white hover:bg-success/90 transition-colors"
-            >
+            <button onClick={handleFinish} className="rounded-xl bg-emerald-600 py-6 text-2xl font-bold text-white hover:bg-emerald-700 transition-colors">
               NEXT ORDER
             </button>
           )}
-
-          {(status === 'processing' || status === 'uploading') && (
-            <div className="rounded-xl bg-muted py-8 text-center">
-              <p className="text-xl font-bold text-warning animate-pulse">
-                {status === 'processing' ? 'Processing video...' : 'Uploading...'}
-              </p>
-            </div>
-          )}
-
           {status === 'loading' && (
-            <div className="rounded-xl bg-muted py-8 text-center">
-              <p className="text-xl text-muted-foreground animate-pulse">Setting up...</p>
+            <div className="rounded-xl bg-muted py-6 text-center"><p className="text-lg text-muted-foreground animate-pulse">Locking order...</p></div>
+          )}
+        </div>
+
+        <div className="w-[380px] flex flex-col gap-3 overflow-y-auto">
+          <div className="rounded-xl border border-border bg-muted/50 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold">Order #{orderId}</h3>
+              {order?.customer_name && <span className="text-xs text-muted-foreground">{order.customer_name}</span>}
+            </div>
+            {items.length > 0 ? (
+              <div className="space-y-1">
+                {items.map((item, i) => (
+                  <button key={i} onClick={() => toggleItem(i)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm border transition-colors ${checkedItems.has(i) ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'border-border hover:bg-muted/50'}`}>
+                    <span className="flex items-center gap-2">
+                      <span className={`inline-flex h-5 w-5 items-center justify-center rounded border text-[10px] font-bold ${checkedItems.has(i) ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-border'}`}>
+                        {checkedItems.has(i) ? '✓' : ''}
+                      </span>
+                      {item.name}
+                    </span>
+                    <span className="font-mono text-xs">x{item.quantity}</span>
+                  </button>
+                ))}
+                <div className="pt-2 text-right text-xs text-muted-foreground">
+                  {checkedItems.size}/{items.length} verified
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No line items loaded</p>
+            )}
+          </div>
+
+          {(status === 'shipping' || status === 'done') && (
+            <ShippingPanel
+              orderId={orderId}
+              stationId={stationId}
+              shippingAddress={order?.shipping_address}
+              onLabelCreated={handleLabelCreated}
+            />
+          )}
+
+          {labelInfo && status === 'done' && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+              <p className="text-xs font-bold text-emerald-700">Tracking: {labelInfo.tracking_number}</p>
+              <p className="text-xs text-emerald-600">${labelInfo.shipment_cost?.toFixed(2)}</p>
             </div>
           )}
 
-          <button
-            onClick={handleCancel}
-            className="rounded-lg border border-border py-2 text-sm text-muted-foreground hover:bg-muted"
-          >
+          <button onClick={handleCancel} className="rounded-lg border border-border py-2 text-xs text-muted-foreground hover:bg-muted">
             Cancel &amp; Return
           </button>
         </div>
