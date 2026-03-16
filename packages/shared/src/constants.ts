@@ -27,6 +27,7 @@ export const WOO_META_KEYS = {
   STATION_NAME: '_packagepro_station_name',
   RECORDED_AT: '_packagepro_recorded_at',
   VIEWER_TOKEN: '_packagepro_viewer_token',
+  VIEWER_URL: '_packagepro_viewer_url',
 } as const;
 
 export const STORAGE_BUCKET = 'videos';

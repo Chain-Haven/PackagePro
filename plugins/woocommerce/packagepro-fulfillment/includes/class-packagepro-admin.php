@@ -27,7 +27,15 @@ class PackagePro_Admin {
     }
 
     public static function enqueue_assets($hook) {
-        if ($hook !== 'woocommerce_page_packagepro-settings') {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        $is_settings = $hook === 'woocommerce_page_packagepro-settings';
+        $is_order_screen = $screen && (
+            $screen->id === 'shop_order'
+            || $screen->id === 'woocommerce_page_wc-orders'
+            || (function_exists('wc_get_page_screen_id') && $screen->id === wc_get_page_screen_id('shop-order'))
+        );
+
+        if (!$is_settings && !$is_order_screen) {
             return;
         }
         wp_enqueue_style('packagepro-admin', PACKAGEPRO_PLUGIN_URL . 'assets/admin.css', [], PACKAGEPRO_VERSION);
@@ -46,6 +54,7 @@ class PackagePro_Admin {
         }
         $code = strtoupper(wp_generate_password(8, false, false));
         update_option('packagepro_pairing_code', $code);
+        update_option('packagepro_pairing_code_created_at', time());
         wp_send_json_success(['code' => $code]);
     }
 
@@ -62,12 +71,10 @@ class PackagePro_Admin {
         if (!$order) {
             wp_send_json_error();
         }
-        $backend_url = get_option('packagepro_backend_url', '');
-        $video_id = $order->get_meta('_packagepro_video_id');
-        if (!$backend_url || !$video_id) {
+        $viewer_url = $order->get_meta('_packagepro_viewer_url');
+        if (!$viewer_url) {
             wp_send_json_error();
         }
-        $viewer_url = rtrim($backend_url, '/') . '/view/' . $video_id;
         WC()->mailer();
         if (!class_exists('PackagePro_Email_Packing_Video')) {
             wp_send_json_error(['message' => __('Email system not available', 'packagepro-fulfillment')]);
@@ -86,6 +93,7 @@ class PackagePro_Admin {
         if (!$pairing_code && !$is_paired) {
             $pairing_code = strtoupper(wp_generate_password(8, false, false));
             update_option('packagepro_pairing_code', $pairing_code);
+            update_option('packagepro_pairing_code_created_at', time());
         }
         ?>
         <div class="wrap">
@@ -96,9 +104,9 @@ class PackagePro_Admin {
                 <h2 style="margin-top: 0;"><?php esc_html_e('Connect to PackagePro', 'packagepro-fulfillment'); ?></h2>
                 <p><?php esc_html_e('Use this pairing code in the PackagePro admin dashboard or desktop app to connect this store:', 'packagepro-fulfillment'); ?></p>
 
-                <div style="background: #f0f0f1; border-radius: 8px; padding: 24px; text-align: center; margin: 16px 0;">
+                <div class="packagepro-pairing-code" style="background: #f0f0f1; border-radius: 8px; padding: 24px; text-align: center; margin: 16px 0;">
                     <div style="font-size: 2.5em; font-family: monospace; font-weight: bold; letter-spacing: 0.3em; color: #2271b1;">
-                        <?php echo esc_html($pairing_code); ?>
+                        <code><?php echo esc_html($pairing_code); ?></code>
                     </div>
                     <p style="margin: 12px 0 0; color: #646970; font-size: 13px;">
                         <?php esc_html_e('Enter this code in the "Pair Store" step on packageprotectpro.com or the desktop app', 'packagepro-fulfillment'); ?>

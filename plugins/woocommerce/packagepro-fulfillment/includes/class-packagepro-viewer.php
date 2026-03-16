@@ -11,16 +11,15 @@ class PackagePro_Viewer {
         $video_status = $order->get_meta('_packagepro_video_status');
         if ($video_status !== 'ready') return;
 
-        $backend_url = get_option('packagepro_backend_url', '');
-        $video_id = $order->get_meta('_packagepro_video_id');
-        if (!$backend_url || !$video_id) return;
+        $viewer_url = $order->get_meta('_packagepro_viewer_url');
+        if (!$viewer_url) return;
 
         ?>
         <section class="packagepro-video-section" style="margin-top: 20px;">
             <h2><?php esc_html_e('Packing Video', 'packagepro-fulfillment'); ?></h2>
             <p><?php esc_html_e('Watch the video of your order being packed:', 'packagepro-fulfillment'); ?></p>
             <p>
-                <a href="<?php echo esc_url($backend_url . '/view/' . $video_id); ?>" 
+                <a href="<?php echo esc_url($viewer_url); ?>" 
                    class="button" 
                    target="_blank" 
                    rel="noopener noreferrer">
