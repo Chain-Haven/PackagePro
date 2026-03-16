@@ -3,6 +3,7 @@ import { requireVideoAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { writeAuditLog } from '@/lib/audit';
 import { buildExternalUrl, getEncryptionKey } from '@/lib/security';
+import { getWebAppUrl } from '@/lib/env';
 import {
   DEFAULT_VIEWER_TOKEN_TTL_DAYS,
   decryptIfNeeded,
@@ -61,8 +62,9 @@ export async function POST(
 
     const rawToken = generateToken(VIEWER_TOKEN_BYTES);
     const tokenHash = hashToken(rawToken);
+    const tokenTtlDays = storeSettings?.viewer_token_ttl_days ?? DEFAULT_VIEWER_TOKEN_TTL_DAYS;
     const expiresAt = new Date(
-      Date.now() + DEFAULT_VIEWER_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+      Date.now() + tokenTtlDays * 24 * 60 * 60 * 1000
     ).toISOString();
 
     await admin.from('video_access_tokens').insert({
@@ -73,7 +75,7 @@ export async function POST(
       secondary_verification: storeSettings?.require_secondary_verification ?? false,
     });
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = getWebAppUrl();
     const viewerUrl = `${appUrl}/view/${rawToken}`;
 
     const emailPayload = JSON.stringify({

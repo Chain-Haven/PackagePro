@@ -63,6 +63,22 @@ async function handleVoid(
 
     const result = await client.voidLabel(labelId);
 
+    await admin
+      .from('shipping_labels')
+      .update({
+        status: result.approved ? 'voided' : 'void_failed',
+        voided_at: result.approved ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('external_label_id', labelId);
+
+    if (result.approved) {
+      await admin
+        .from('orders')
+        .update({ shipment_status: 'voided' })
+        .eq('shipstation_order_id', labelId);
+    }
+
     await writeAuditLog({
       admin,
       orgId,

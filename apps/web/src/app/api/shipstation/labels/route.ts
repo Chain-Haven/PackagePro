@@ -75,8 +75,29 @@ export async function POST(request: NextRequest) {
 
     const label = await client.createLabel(labelRequest);
 
+    await admin.from('shipping_labels').insert({
+      org_id: accessibleOrder.org_id,
+      store_id: accessibleOrder.store_id,
+      order_id,
+      shipstation_account_id: account.id,
+      external_label_id: label.label_id,
+      tracking_number: label.tracking_number,
+      label_download_url: label.label_download?.pdf || '',
+      carrier_id,
+      service_code,
+      shipment_cost: label.shipment_cost?.amount || 0,
+      currency: label.shipment_cost?.currency || 'USD',
+      status: label.status,
+      ship_to: labelRequest.shipment.ship_to,
+      ship_from: labelRequest.shipment.ship_from,
+      packages: labelRequest.shipment.packages,
+      created_by: user.id,
+    });
+
     await admin.from('orders').update({
       shipstation_order_id: label.label_id,
+      tracking_number: label.tracking_number,
+      shipment_status: label.status,
     }).eq('id', order_id);
 
     await writeAuditLog({

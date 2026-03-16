@@ -22,6 +22,7 @@ interface OrderData {
   line_items: Array<{ name: string; quantity: number }>;
   order_total: string;
   video_status: string;
+  preferred_shipstation_account_id?: string | null;
 }
 
 export function PackingScreen({ orderId, stationId, onFinish }: Props) {
@@ -219,6 +220,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
               stationId={stationId}
               shippingAddress={order?.shipping_address}
               onLabelCreated={handleLabelCreated}
+              onLabelVoided={() => {
+                setLabelInfo(null);
+                setStatus('shipping');
+              }}
+              preferredAccountId={order?.preferred_shipstation_account_id}
             />
           )}
 

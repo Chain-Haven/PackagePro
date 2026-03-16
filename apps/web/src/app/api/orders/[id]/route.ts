@@ -12,7 +12,7 @@ export async function GET(
 
     const { data: order, error } = await admin
       .from('orders')
-      .select('*, order_locks(*), stores(id, name, url)')
+      .select('*, order_locks(*), stores(id, name, url, shipstation_store_mappings(shipstation_account_id))')
       .eq('id', orderId)
       .single();
 
@@ -20,7 +20,19 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ order });
+    const store = order.stores as Record<string, unknown> | null;
+    const preferredAccountId =
+      Array.isArray(store?.shipstation_store_mappings) &&
+      store.shipstation_store_mappings.length > 0
+        ? (store.shipstation_store_mappings[0] as Record<string, string>).shipstation_account_id
+        : null;
+
+    return NextResponse.json({
+      order: {
+        ...order,
+        preferred_shipstation_account_id: preferredAccountId,
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

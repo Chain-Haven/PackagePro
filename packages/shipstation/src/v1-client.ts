@@ -8,33 +8,37 @@ export class ShipStationV1Client {
 
   constructor(apiKey: string, apiSecret: string) {
     this.authHeader = 'Basic ' + Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-    this.rateLimiter = new RateLimiter(40);
+    this.rateLimiter = new RateLimiter(40, `shipstation-v1:${apiKey}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    await this.rateLimiter.acquire();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await this.rateLimiter.acquire();
 
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        Authorization: this.authHeader,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+      const res = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: this.authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
 
-    if (res.status === 429) {
-      const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
-      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
-      return this.request(method, path, body);
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('Retry-After') || '5', 10);
+        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+        continue;
+      }
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`ShipStation V1 ${method} ${path} failed: ${res.status} ${text}`);
+      }
+
+      return res.json() as Promise<T>;
     }
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`ShipStation V1 ${method} ${path} failed: ${res.status} ${text}`);
-    }
-
-    return res.json() as Promise<T>;
+    throw new Error(`ShipStation V1 ${method} ${path} exhausted retry budget`);
   }
 
   async listStores(): Promise<V1Store[]> {

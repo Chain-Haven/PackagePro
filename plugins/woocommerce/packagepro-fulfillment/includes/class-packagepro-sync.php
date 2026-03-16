@@ -33,7 +33,28 @@ class PackagePro_Sync {
                 'status' => $order->get_status(),
                 'total' => $order->get_total(),
                 'billing_email' => $order->get_billing_email(),
-                'date_created' => $order->get_date_created() ? $order->get_date_created()->format('c') : '',
+                'billing_first_name' => $order->get_billing_first_name(),
+                'billing_last_name' => $order->get_billing_last_name(),
+                'shipping' => [
+                    'first_name' => $order->get_shipping_first_name(),
+                    'last_name' => $order->get_shipping_last_name(),
+                    'address_1' => $order->get_shipping_address_1(),
+                    'address_2' => $order->get_shipping_address_2(),
+                    'city' => $order->get_shipping_city(),
+                    'state' => $order->get_shipping_state(),
+                    'postcode' => $order->get_shipping_postcode(),
+                    'country' => $order->get_shipping_country(),
+                ],
+                'line_items' => array_map(function ($item) {
+                    $product = $item->get_product();
+                    return [
+                        'id' => $item->get_id(),
+                        'name' => $item->get_name(),
+                        'sku' => ($product instanceof WC_Product) ? $product->get_sku() : '',
+                        'quantity' => $item->get_quantity(),
+                        'total' => $item->get_total(),
+                    ];
+                }, $order->get_items()),
             ];
         }, $orders);
 
