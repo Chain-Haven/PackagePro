@@ -1,7 +1,9 @@
 node_modules/
 .next/
 dist/
+dist-electron/
 out/
+release/
 .turbo/
 *.tsbuildinfo
 .env
@@ -14,3 +16,7 @@ coverage/
 temp/
 *.mp4
 *.webm
+*.dmg
+*.zip
+*.blockmap
+*.asar

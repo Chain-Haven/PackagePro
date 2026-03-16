@@ -313,7 +313,7 @@ ALTER TABLE webhook_deliveries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE store_settings ENABLE ROW LEVEL SECURITY;
 
--- organizations: SELECT if user has membership
+-- organizations: SELECT if user has membership; INSERT for org creation (bootstrap)
 CREATE POLICY "org_member_select" ON organizations
   FOR SELECT TO authenticated
   USING (
@@ -321,6 +321,10 @@ CREATE POLICY "org_member_select" ON organizations
       SELECT org_id FROM memberships WHERE user_id = auth.uid()
     )
   );
+
+CREATE POLICY "org_insert" ON organizations
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
 
 -- users: users can read their own row
 CREATE POLICY "users_select_own" ON users
@@ -339,9 +343,15 @@ CREATE POLICY "memberships_select" ON memberships
 CREATE POLICY "memberships_insert" ON memberships
   FOR INSERT TO authenticated
   WITH CHECK (
-    org_id IN (
-      SELECT org_id FROM memberships m WHERE m.user_id = auth.uid()
+    -- Org owner/admin can add any member
+    EXISTS (
+      SELECT 1 FROM memberships m2
+      WHERE m2.user_id = auth.uid() AND m2.org_id = org_id
+      AND m2.role IN ('org_owner', 'org_admin')
     )
+    OR
+    -- Bootstrap: user adds themselves as first member of org
+    (user_id = auth.uid() AND NOT EXISTS (SELECT 1 FROM memberships m2 WHERE m2.org_id = org_id))
   );
 
 CREATE POLICY "memberships_update" ON memberships

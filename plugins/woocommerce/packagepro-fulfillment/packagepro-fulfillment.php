@@ -65,8 +65,18 @@ add_action('plugins_loaded', function () {
 
 // Activation hook
 register_activation_hook(__FILE__, function () {
-    if (!packagepro_check_woocommerce()) {
-        return;
+    $active = apply_filters('active_plugins', get_option('active_plugins', []));
+    $network_active = is_multisite()
+        ? array_keys(get_site_option('active_sitewide_plugins', []))
+        : [];
+
+    if (!in_array('woocommerce/woocommerce.php', array_merge($active, $network_active), true)) {
+        deactivate_plugins(plugin_basename(__FILE__));
+        wp_die(
+            esc_html__('PackagePro Fulfillment requires WooCommerce to be installed and active.', 'packagepro-fulfillment'),
+            esc_html__('Plugin Activation Error', 'packagepro-fulfillment'),
+            ['back_link' => true]
+        );
     }
 
     // Generate initial webhook secret

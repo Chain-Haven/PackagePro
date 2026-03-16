@@ -9,11 +9,11 @@ class PackagePro_Webhooks {
         add_action('woocommerce_order_status_changed', [__CLASS__, 'on_order_status_changed'], 10, 4);
     }
 
-    public static function on_order_created($order_id, $order) {
+    public static function on_order_created($order_id, $order = null) {
         self::send_webhook('order.created', $order_id, $order);
     }
 
-    public static function on_order_updated($order_id, $order) {
+    public static function on_order_updated($order_id, $order = null) {
         self::send_webhook('order.updated', $order_id, $order);
     }
 
@@ -61,10 +61,11 @@ class PackagePro_Webhooks {
                     'country' => $order->get_shipping_country(),
                 ],
                 'line_items' => array_map(function ($item) {
+                    $product = $item->get_product();
                     return [
                         'id' => $item->get_id(),
                         'name' => $item->get_name(),
-                        'sku' => $item->get_product() ? $item->get_product()->get_sku() : '',
+                        'sku' => ($product instanceof WC_Product) ? $product->get_sku() : '',
                         'quantity' => $item->get_quantity(),
                         'total' => $item->get_total(),
                     ];

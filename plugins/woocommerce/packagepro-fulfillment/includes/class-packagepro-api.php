@@ -65,18 +65,26 @@ class PackagePro_API {
         $backend_url = esc_url_raw($request->get_param('backend_url'));
         $store_id = sanitize_text_field($request->get_param('store_id'));
 
+        if (!$pairing_code || !$backend_url || !$store_id) {
+            return new WP_Error('missing_params', __('Missing required parameters', 'packagepro-fulfillment'), ['status' => 400]);
+        }
+
         $stored_code = get_option('packagepro_pairing_code', '');
 
         if (!$stored_code || strtoupper($pairing_code) !== strtoupper($stored_code)) {
-            return new WP_Error('invalid_code', 'Invalid pairing code', ['status' => 400]);
+            return new WP_Error('invalid_code', __('Invalid pairing code', 'packagepro-fulfillment'), ['status' => 400]);
         }
 
         // Generate WooCommerce API credentials for the backend
         $user_id = get_current_user_id() ?: 1;
         
         global $wpdb;
-        $consumer_key = 'ck_' . wc_rand_hash();
-        $consumer_secret = 'cs_' . wc_rand_hash();
+        $consumer_key = 'ck_' . wp_generate_password(40, false);
+        $consumer_secret = 'cs_' . bin2hex(random_bytes(20));
+
+        $hashed_key = function_exists('wc_api_hash')
+            ? wc_api_hash($consumer_key)
+            : hash_hmac('sha256', $consumer_key, 'wc-api');
 
         $wpdb->insert(
             $wpdb->prefix . 'woocommerce_api_keys',
@@ -84,7 +92,7 @@ class PackagePro_API {
                 'user_id' => $user_id,
                 'description' => 'PackagePro Cloud Backend',
                 'permissions' => 'read_write',
-                'consumer_key' => wc_api_hash($consumer_key),
+                'consumer_key' => $hashed_key,
                 'consumer_secret' => $consumer_secret,
                 'truncated_key' => substr($consumer_key, -7),
             ],
@@ -155,7 +163,10 @@ class PackagePro_API {
             return new WP_Error('not_found', 'Order not found', ['status' => 404]);
         }
 
-        $mailer = WC()->mailer();
+        WC()->mailer();
+        if (!class_exists('PackagePro_Email_Packing_Video')) {
+            return new WP_Error('email_unavailable', __('Email system not available', 'packagepro-fulfillment'), ['status' => 500]);
+        }
         $email = new PackagePro_Email_Packing_Video();
         $email->trigger($order_id, $order, $viewer_url);
 
@@ -165,15 +176,26 @@ class PackagePro_API {
     public static function handle_health($request) {
         $is_paired = get_option('packagepro_paired', false);
         $backend_url = get_option('packagepro_backend_url', '');
-        
+
+        $hpos_enabled = false;
+        try {
+            if (
+                class_exists('\Automattic\WooCommerce\Utilities\OrderUtil')
+                && method_exists('\Automattic\WooCommerce\Utilities\OrderUtil', 'custom_orders_table_usage_is_enabled')
+            ) {
+                $hpos_enabled = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+            }
+        } catch (\Exception $e) {
+            // Older WC without HPOS support
+        }
+
         $health = [
             'plugin_version' => PACKAGEPRO_VERSION,
             'wc_version' => defined('WC_VERSION') ? WC_VERSION : 'unknown',
             'wp_version' => get_bloginfo('version'),
             'php_version' => phpversion(),
             'paired' => (bool) $is_paired,
-            'hpos_enabled' => class_exists('Automattic\WooCommerce\Utilities\OrderUtil')
-                && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled(),
+            'hpos_enabled' => $hpos_enabled,
             'timestamp' => current_time('c'),
         ];
 

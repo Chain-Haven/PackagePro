@@ -26,11 +26,18 @@ class PackagePro_Order {
     }
 
     private static function get_order_screen() {
-        if (
-            class_exists('\Automattic\WooCommerce\Utilities\OrderUtil')
-            && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled()
-        ) {
-            return wc_get_page_screen_id('shop-order');
+        try {
+            if (
+                class_exists('\Automattic\WooCommerce\Utilities\OrderUtil')
+                && method_exists('\Automattic\WooCommerce\Utilities\OrderUtil', 'custom_orders_table_usage_is_enabled')
+                && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled()
+            ) {
+                return function_exists('wc_get_page_screen_id')
+                    ? wc_get_page_screen_id('shop-order')
+                    : 'woocommerce_page_wc-orders';
+            }
+        } catch (\Exception $e) {
+            // Fall through to legacy screen ID
         }
         return 'shop_order';
     }
@@ -118,7 +125,12 @@ class PackagePro_Order {
             'failed' => '&#10008;',
             'deleted' => '&#128465;',
         ];
-        echo esc_html($icons[$video_status] ?? $video_status);
+        $icon = $icons[$video_status] ?? null;
+        if ($icon !== null) {
+            echo wp_kses_post($icon);
+        } else {
+            echo esc_html($video_status);
+        }
     }
 
     public static function render_order_column_legacy($column_name, $post_id) {

@@ -8,9 +8,15 @@ class PackagePro_Email {
     }
 
     public static function register_email($emails) {
-        $emails['PackagePro_Email_Packing_Video'] = new PackagePro_Email_Packing_Video();
+        if (class_exists('PackagePro_Email_Packing_Video')) {
+            $emails['PackagePro_Email_Packing_Video'] = new PackagePro_Email_Packing_Video();
+        }
         return $emails;
     }
+}
+
+if (!class_exists('WC_Email')) {
+    return;
 }
 
 class PackagePro_Email_Packing_Video extends WC_Email {

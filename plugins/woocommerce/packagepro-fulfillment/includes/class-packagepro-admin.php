@@ -72,6 +72,10 @@ class PackagePro_Admin {
             wp_send_json_error();
         }
         $viewer_url = rtrim($backend_url, '/') . '/view/' . $video_id;
+        WC()->mailer();
+        if (!class_exists('PackagePro_Email_Packing_Video')) {
+            wp_send_json_error(['message' => __('Email system not available', 'packagepro-fulfillment')]);
+        }
         $email = new PackagePro_Email_Packing_Video();
         $email->trigger($order_id, $order, $viewer_url);
         wp_send_json_success();

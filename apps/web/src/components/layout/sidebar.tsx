@@ -4,6 +4,8 @@ import {
   Store,
   Package,
   Monitor,
+  Video,
+  FileText,
   Settings,
 } from 'lucide-react';
 
@@ -12,6 +14,8 @@ const navItems = [
   { href: '/stores', label: 'Stores', icon: Store },
   { href: '/orders', label: 'Orders', icon: Package },
   { href: '/stations', label: 'Stations', icon: Monitor },
+  { href: '/videos', label: 'Videos', icon: Video },
+  { href: '/audit', label: 'Audit Log', icon: FileText },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
