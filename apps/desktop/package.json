@@ -13,7 +13,6 @@
     "clean": "rm -rf dist dist-electron"
   },
   "dependencies": {
-    "@packagepro/shared": "workspace:*",
     "@supabase/supabase-js": "^2",
     "@tanstack/react-query": "^5",
     "class-variance-authority": "^0.7",
@@ -26,6 +25,7 @@
     "zod": "^3.23"
   },
   "devDependencies": {
+    "@packagepro/shared": "workspace:*",
     "@tailwindcss/vite": "^4",
     "@types/node": "^22",
     "@types/react": "^19",

@@ -17,9 +17,6 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@packagepro/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@supabase/supabase-js':
         specifier: ^2
         version: 2.99.1
@@ -51,6 +48,9 @@ importers:
         specifier: ^3.23
         version: 3.25.76
     devDependencies:
+      '@packagepro/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@tailwindcss/vite':
         specifier: ^4
         version: 4.2.1(vite@6.4.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.31.1))
