@@ -1,32 +1,38 @@
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+import { ApiError } from '@/lib/api-utils';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export function rateLimit(
-  key: string,
-  limit: number,
-  windowMs: number
-): { allowed: boolean; remaining: number } {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || entry.resetAt < now) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, remaining: limit - 1 };
-  }
-
-  if (entry.count >= limit) {
-    return { allowed: false, remaining: 0 };
-  }
-
-  entry.count++;
-  return { allowed: true, remaining: limit - entry.count };
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: string;
 }
 
-// Clean up expired entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap) {
-    if (entry.resetAt < now) {
-      rateLimitMap.delete(key);
-    }
+export async function consumeRateLimit(
+  scope: string,
+  subjectKey: string,
+  limit: number,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc('consume_rate_limit', {
+    p_scope: scope,
+    p_subject_key: subjectKey,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  });
+
+  if (error) {
+    throw new ApiError(503, 'Rate limiter unavailable');
   }
-}, 60000);
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new ApiError(503, 'Rate limiter unavailable');
+  }
+
+  return {
+    allowed: Boolean(row.allowed),
+    remaining: Number(row.remaining ?? 0),
+    resetAt: String(row.reset_at),
+  };
+}

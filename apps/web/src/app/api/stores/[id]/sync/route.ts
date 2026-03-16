@@ -1,52 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { requireStoreAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
-import { decrypt } from '@packagepro/shared';
+import { writeAuditLog } from '@/lib/audit';
+import { buildExternalUrl, enforceRateLimit, getEncryptionKey } from '@/lib/security';
+import {
+  API_WRITE_RATE_LIMIT_PER_MIN,
+  API_WRITE_RATE_LIMIT_WINDOW_SECONDS,
+  decryptIfNeeded,
+} from '@packagepro/shared';
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: storeId } = await params;
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { store, user, admin } = await requireStoreAccess(storeId, request, [
+      'org_owner',
+      'org_admin',
+    ]);
 
-    const admin = createAdminClient();
+    await enforceRateLimit(
+      request,
+      'store-sync',
+      `${user.id}:${storeId}`,
+      API_WRITE_RATE_LIMIT_PER_MIN,
+      API_WRITE_RATE_LIMIT_WINDOW_SECONDS
+    );
 
-    const { data: store } = await admin
-      .from('stores')
-      .select('*')
-      .eq('id', storeId)
-      .single();
-
-    if (!store || !store.paired_at) {
+    if (!store.paired_at) {
       return NextResponse.json({ error: 'Store not found or not paired' }, { status: 404 });
     }
 
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey || !store.consumer_key_encrypted || !store.consumer_secret_encrypted) {
+    const encryptionKey = getEncryptionKey();
+    if (!store.consumer_key_encrypted || !store.consumer_secret_encrypted) {
       return NextResponse.json({ error: 'Store credentials missing' }, { status: 500 });
     }
 
-    const consumerKey = decrypt(store.consumer_key_encrypted, encryptionKey);
-    const consumerSecret = decrypt(store.consumer_secret_encrypted, encryptionKey);
+    const consumerKey = decryptIfNeeded(store.consumer_key_encrypted, encryptionKey);
+    const consumerSecret = decryptIfNeeded(store.consumer_secret_encrypted, encryptionKey);
 
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
-    const wcUrl = `${store.url}/wp-json/wc/v3/orders?per_page=50&status=processing,on-hold,pending`;
-
-    const wcResponse = await fetch(wcUrl, {
-      headers: { 'Authorization': `Basic ${auth}` },
+    const wcUrl = buildExternalUrl(store.url, '/wp-json/wc/v3/orders', {
+      allowHttpLocalhost: process.env.NODE_ENV !== 'production',
     });
-
-    if (!wcResponse.ok) {
-      await admin.from('stores').update({ sync_status: 'error' }).eq('id', storeId);
-      return NextResponse.json({ error: 'Failed to fetch orders from WooCommerce' }, { status: 502 });
-    }
-
-    const wcOrders = await wcResponse.json();
     let synced = 0;
+    let total = 0;
+
+    await admin
+      .from('stores')
+      .update({ sync_status: 'syncing' })
+      .eq('id', storeId);
+
+    const wcOrders: any[] = [];
+    for (let page = 1; page <= 20; page += 1) {
+      const pageUrl = new URL(wcUrl);
+      pageUrl.searchParams.set('per_page', '100');
+      pageUrl.searchParams.set('page', String(page));
+      pageUrl.searchParams.set('status', 'processing,on-hold,pending');
+
+      const wcResponse = await fetch(pageUrl, {
+        headers: { Authorization: `Basic ${auth}` },
+      });
+
+      if (!wcResponse.ok) {
+        await admin.from('stores').update({ sync_status: 'error' }).eq('id', storeId);
+        return NextResponse.json(
+          { error: 'Failed to fetch orders from WooCommerce' },
+          { status: 502 }
+        );
+      }
+
+      const pageOrders = await wcResponse.json();
+      if (!Array.isArray(pageOrders) || pageOrders.length === 0) {
+        break;
+      }
+
+      wcOrders.push(...pageOrders);
+      if (pageOrders.length < 100) {
+        break;
+      }
+    }
 
     for (const wcOrder of wcOrders) {
       const orderData = {
@@ -75,6 +109,7 @@ export async function POST(
         .upsert(orderData, { onConflict: 'store_id,woo_order_id' });
 
       if (!error) synced++;
+      total++;
     }
 
     await admin.from('stores').update({
@@ -82,7 +117,19 @@ export async function POST(
       last_sync_at: new Date().toISOString(),
     }).eq('id', storeId);
 
-    return NextResponse.json({ success: true, synced_count: synced, total: wcOrders.length });
+    await writeAuditLog({
+      admin,
+      orgId: store.org_id,
+      actorId: user.id,
+      actorType: 'user',
+      action: 'store_synced',
+      resourceType: 'store',
+      resourceId: storeId,
+      details: { synced_count: synced, total },
+      request,
+    });
+
+    return NextResponse.json({ success: true, synced_count: synced, total });
   } catch (err) {
     return handleApiError(err);
   }

@@ -1,4 +1,4 @@
-import { getBackendUrl } from './supabase';
+import { getBackendUrl, getSupabase } from './supabase';
 
 async function getApiBase(): Promise<string> {
   if (typeof window !== 'undefined' && window.electronAPI?.getConfig) {
@@ -17,12 +17,16 @@ interface ApiOptions {
 export async function apiCall<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, token } = options;
   const API_BASE = await getApiBase();
+  const sessionToken =
+    token ||
+    (await getSupabase().auth.getSession()).data.session?.access_token ||
+    undefined;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {

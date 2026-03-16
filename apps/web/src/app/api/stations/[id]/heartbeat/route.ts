@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { requireStationAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: stationId } = await params;
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const admin = createAdminClient();
+    const { admin } = await requireStationAccess(stationId, request);
     const { error } = await admin
       .from('stations')
       .update({

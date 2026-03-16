@@ -8,6 +8,8 @@ import {
 } from 'crypto';
 import { ENCRYPTION_ALGORITHM } from './constants';
 
+const ENCRYPTED_SEGMENT = /^[0-9a-f]+$/i;
+
 export function encrypt(plaintext: string, key: string): string {
   const iv = randomBytes(16);
   const keyBuffer = Buffer.from(key, 'hex');
@@ -28,6 +30,21 @@ export function decrypt(encryptedData: string, key: string): string {
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
+}
+
+export function isEncryptedValue(value: string | null | undefined): value is string {
+  if (!value) return false;
+  const parts = value.split(':');
+  if (parts.length !== 3) return false;
+  return parts.every((part) => part.length > 0 && part.length % 2 === 0 && ENCRYPTED_SEGMENT.test(part));
+}
+
+export function encryptIfNeeded(plaintext: string, key: string): string {
+  return isEncryptedValue(plaintext) ? plaintext : encrypt(plaintext, key);
+}
+
+export function decryptIfNeeded(value: string, key: string): string {
+  return isEncryptedValue(value) ? decrypt(value, key) : value;
 }
 
 export function generateToken(bytes: number = 32): string {

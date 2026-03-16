@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleApiError } from '@/lib/api-utils';
 import { STORAGE_BUCKET } from '@packagepro/shared';
+import { requireCronAccess } from '@/lib/security';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-
+    await requireCronAccess(request);
     const admin = createAdminClient();
 
     const { data: settings } = await admin
@@ -54,6 +54,12 @@ export async function POST() {
         deletedCount++;
       }
     }
+
+    const rateLimitCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    await admin
+      .from('request_rate_limits')
+      .delete()
+      .lt('updated_at', rateLimitCutoff);
 
     return NextResponse.json({
       deleted: deletedCount,

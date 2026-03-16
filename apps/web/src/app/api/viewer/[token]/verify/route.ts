@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { handleApiError } from '@/lib/api-utils';
-import { hashToken, STORAGE_BUCKET, VIDEO_SIGNED_URL_EXPIRY_SECONDS } from '@packagepro/shared';
+import { getRequestIp, handleApiError } from '@/lib/api-utils';
+import { enforceRateLimit } from '@/lib/security';
+import {
+  hashToken,
+  STORAGE_BUCKET,
+  VIDEO_SIGNED_URL_EXPIRY_SECONDS,
+  VIEWER_RATE_LIMIT_PER_MIN,
+  ViewerVerifyRequestSchema,
+} from '@packagepro/shared';
 
 export async function POST(
   request: NextRequest,
@@ -9,8 +16,16 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+    await enforceRateLimit(request, 'viewer-token-verify', token, VIEWER_RATE_LIMIT_PER_MIN, 60);
     const body = await request.json();
-    const { email, postal_code } = body;
+    const parsedBody = ViewerVerifyRequestSchema.safeParse(body);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsedBody.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const { email, postal_code } = parsedBody.data;
 
     const tokenHash = hashToken(token);
     const admin = createAdminClient();
@@ -49,7 +64,7 @@ export async function POST(
     await admin.from('video_access_logs').insert({
       video_id: video.id,
       token_id: accessToken.id,
-      ip_address: request.headers.get('x-forwarded-for') || null,
+      ip_address: getRequestIp(request),
       user_agent: request.headers.get('user-agent') || null,
       verified,
     });

@@ -1,44 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { requireShipStationAccountAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
-import { decrypt } from '@packagepro/shared';
+import { getEncryptionKey } from '@/lib/security';
+import { decryptIfNeeded } from '@packagepro/shared';
 import { ShipStationV2Client } from '@packagepro/shipstation';
+import { z } from 'zod';
+
+const GetRatesSchema = z.object({
+  account_id: z.string().uuid(),
+  shipment: z.object({
+    carrier_id: z.string().optional(),
+    ship_to: z.record(z.unknown()),
+    ship_from: z.record(z.unknown()),
+    packages: z.array(z.record(z.unknown())).min(1),
+  }),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
     const body = await request.json();
-    const { account_id, shipment } = body;
-
-    if (!account_id || !shipment) {
+    const parsed = GetRatesSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'account_id and shipment required' },
+        { error: 'Validation failed', details: parsed.error.flatten() },
         { status: 400 }
       );
     }
 
-    const admin = createAdminClient();
-    const { data: account } = await admin
-      .from('shipstation_accounts')
-      .select('*')
-      .eq('id', account_id)
-      .single();
-
-    if (!account)
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
-
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey)
-      return NextResponse.json({ error: 'Server config error' }, { status: 500 });
-
-    const apiKeyData = decrypt(account.api_key_encrypted, encryptionKey);
+    const { account } = await requireShipStationAccountAccess(parsed.data.account_id, request);
+    const apiKeyData = decryptIfNeeded(account.api_key_encrypted, getEncryptionKey());
     const apiKey = apiKeyData.split(':')[0];
     const client = new ShipStationV2Client(apiKey);
 
-    const rateResponse = await client.getRates({ shipment });
+    const rateResponse = await client.getRates({ shipment: parsed.data.shipment as any });
     return NextResponse.json(rateResponse);
   } catch (err) {
     return handleApiError(err);
