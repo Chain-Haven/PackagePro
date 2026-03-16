@@ -2,6 +2,13 @@
 defined('ABSPATH') || exit;
 
 class PackagePro_Sync {
+    private static function log_sync_result($message) {
+        update_option('packagepro_last_sync_error', $message);
+        update_option('packagepro_last_sync_attempt_at', current_time('c'));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('[PackagePro] ' . $message);
+        }
+    }
 
     public static function init() {
         add_action('packagepro_reconciliation_sync', [__CLASS__, 'run_reconciliation']);
@@ -65,7 +72,7 @@ class PackagePro_Sync {
         $timestamp = time();
         $signature = hash_hmac('sha256', $timestamp . '.' . $body, $secret);
 
-        wp_remote_post($backend_url . '/api/webhooks/woo/' . $store_id . '/reconcile', [
+        $response = wp_remote_post($backend_url . '/api/webhooks/woo/' . $store_id . '/reconcile', [
             'body' => $body,
             'headers' => [
                 'Content-Type' => 'application/json',
@@ -74,5 +81,19 @@ class PackagePro_Sync {
             ],
             'timeout' => 30,
         ]);
+
+        if (is_wp_error($response)) {
+            self::log_sync_result('Reconciliation failed: ' . $response->get_error_message());
+            return;
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code >= 400) {
+            self::log_sync_result('Reconciliation failed with HTTP ' . $code);
+            return;
+        }
+
+        update_option('packagepro_last_sync_error', '');
+        update_option('packagepro_last_sync_attempt_at', current_time('c'));
     }
 }

@@ -31,6 +31,8 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
   const [error, setError] = useState('');
   const [labelInfo, setLabelInfo] = useState<LabelInfo | null>(null);
   const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
+  const [uploadJobId, setUploadJobId] = useState<string | null>(null);
+  const [uploadJobStatus, setUploadJobStatus] = useState<'idle' | 'pending' | 'uploading' | 'finalizing' | 'completed' | 'failed'>('idle');
 
   const sessionIdRef = useRef(`order_${orderId}_${crypto.randomUUID()}`);
   const camera = useCamera();
@@ -40,6 +42,23 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
     initPacking();
     return () => { camera.stopPreview(); };
   }, []);
+
+  useEffect(() => {
+    if (!uploadJobId) return;
+    return uploadQueue.subscribe((jobs) => {
+      const job = jobs.find((entry) => entry.id === uploadJobId);
+      if (!job) return;
+
+      setUploadJobStatus(job.status);
+      if (job.status === 'failed') {
+        setError(job.lastError || 'Upload failed. Retry from the upload queue before continuing.');
+      }
+
+      if (job.status === 'completed' && labelInfo) {
+        setStatus('done');
+      }
+    });
+  }, [uploadJobId, labelInfo]);
 
   async function initPacking() {
     try {
@@ -74,7 +93,7 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
     try {
       const uploadData = await api.requestUploadUrl(orderId, stationId);
-      uploadQueue.enqueue({
+      const queuedJobId = await uploadQueue.enqueue({
         id: `upload_${Date.now()}`,
         videoId: uploadData.video_id,
         sessionId: sessionIdRef.current,
@@ -83,6 +102,8 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
         uploadUrl: uploadData.upload_url,
         uploadToken: uploadData.token,
       });
+      setUploadJobId(queuedJobId);
+      setUploadJobStatus('pending');
       setStatus('shipping');
     } catch (err) {
       setError(`Upload setup failed: ${err}`);
@@ -92,7 +113,11 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
 
   function handleLabelCreated(label: LabelInfo) {
     setLabelInfo(label);
-    setStatus('done');
+    if (uploadJobStatus === 'completed') {
+      setStatus('done');
+    } else {
+      setStatus('shipping');
+    }
   }
 
   async function handleFinish() {
@@ -215,17 +240,25 @@ export function PackingScreen({ orderId, stationId, onFinish }: Props) {
           </div>
 
           {(status === 'shipping' || status === 'done') && (
-            <ShippingPanel
-              orderId={orderId}
-              stationId={stationId}
-              shippingAddress={order?.shipping_address}
-              onLabelCreated={handleLabelCreated}
-              onLabelVoided={() => {
-                setLabelInfo(null);
-                setStatus('shipping');
-              }}
-              preferredAccountId={order?.preferred_shipstation_account_id}
-            />
+            <>
+              {uploadJobId && (
+                <div className="rounded-xl border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+                  Upload status: <span className="font-semibold text-foreground">{uploadJobStatus}</span>
+                  {uploadJobStatus !== 'completed' && ' — the bench will advance after finalize completes.'}
+                </div>
+              )}
+              <ShippingPanel
+                orderId={orderId}
+                stationId={stationId}
+                shippingAddress={order?.shipping_address}
+                onLabelCreated={handleLabelCreated}
+                onLabelVoided={() => {
+                  setLabelInfo(null);
+                  setStatus('shipping');
+                }}
+                preferredAccountId={order?.preferred_shipstation_account_id}
+              />
+            </>
           )}
 
           {labelInfo && status === 'done' && (

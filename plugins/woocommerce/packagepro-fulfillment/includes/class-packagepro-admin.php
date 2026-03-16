@@ -89,6 +89,10 @@ class PackagePro_Admin {
         $pairing_code = get_option('packagepro_pairing_code', '');
         $backend_url = get_option('packagepro_backend_url', '');
         $store_id = get_option('packagepro_store_id', '');
+        $last_webhook_error = get_option('packagepro_last_webhook_error', '');
+        $last_webhook_attempt_at = get_option('packagepro_last_webhook_attempt_at', '');
+        $last_sync_error = get_option('packagepro_last_sync_error', '');
+        $last_sync_attempt_at = get_option('packagepro_last_sync_attempt_at', '');
 
         if (!$pairing_code && !$is_paired) {
             $pairing_code = strtoupper(wp_generate_password(8, false, false));
@@ -145,7 +149,25 @@ class PackagePro_Admin {
                         <th><?php esc_html_e('Store ID', 'packagepro-fulfillment'); ?></th>
                         <td><code><?php echo esc_html($store_id); ?></code></td>
                     </tr>
+                    <tr>
+                        <th><?php esc_html_e('Last webhook attempt', 'packagepro-fulfillment'); ?></th>
+                        <td><?php echo esc_html($last_webhook_attempt_at ?: 'Never'); ?></td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Last reconcile attempt', 'packagepro-fulfillment'); ?></th>
+                        <td><?php echo esc_html($last_sync_attempt_at ?: 'Never'); ?></td>
+                    </tr>
                 </table>
+                <?php if ($last_webhook_error || $last_sync_error): ?>
+                <div style="margin-top: 16px; padding: 12px; background: #fcf0f1; border-left: 4px solid #d63638;">
+                    <?php if ($last_webhook_error): ?>
+                    <p><strong><?php esc_html_e('Webhook error:', 'packagepro-fulfillment'); ?></strong> <?php echo esc_html($last_webhook_error); ?></p>
+                    <?php endif; ?>
+                    <?php if ($last_sync_error): ?>
+                    <p><strong><?php esc_html_e('Reconcile error:', 'packagepro-fulfillment'); ?></strong> <?php echo esc_html($last_sync_error); ?></p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 

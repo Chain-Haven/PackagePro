@@ -78,7 +78,7 @@ export function App() {
         )}
 
         {screen === 'login' && (
-          <LoginScreen onLogin={() => setScreen('setup')} />
+          <LoginScreen onLogin={() => void checkSession()} />
         )}
 
         {screen === 'setup' && (
