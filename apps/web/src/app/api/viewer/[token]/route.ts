@@ -52,16 +52,10 @@ export async function GET(
 
     const { data: signedUrl } = await admin.storage
       .from(STORAGE_BUCKET)
-      .createSignedUrl(
-        video.storage_path as string,
-        VIDEO_SIGNED_URL_EXPIRY_SECONDS
-      );
+      .createSignedUrl(video.storage_path as string, VIDEO_SIGNED_URL_EXPIRY_SECONDS);
 
     if (!signedUrl) {
-      return NextResponse.json(
-        { error: 'Failed to generate playback URL' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to generate playback URL' }, { status: 500 });
     }
 
     await admin.from('video_access_logs').insert({

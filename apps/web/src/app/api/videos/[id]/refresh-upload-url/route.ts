@@ -4,10 +4,7 @@ import { handleApiError } from '@/lib/api-utils';
 import { writeAuditLog } from '@/lib/audit';
 import { STORAGE_BUCKET } from '@packagepro/shared';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: videoId } = await params;
     const { video, user, admin } = await requireVideoAccess(videoId, request);
@@ -20,8 +17,7 @@ export async function POST(
       return NextResponse.json({ error: 'Video upload is already finalized' }, { status: 409 });
     }
 
-    const { data: signedUrl, error: signError } = await admin
-      .storage
+    const { data: signedUrl, error: signError } = await admin.storage
       .from(STORAGE_BUCKET)
       .createSignedUploadUrl(video.storage_path);
 

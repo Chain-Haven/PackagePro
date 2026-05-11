@@ -38,7 +38,10 @@ export default async function StoresPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Stores</h1>
-        <Link href="/stores/connect" className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        <Link
+          href="/stores/connect"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
           Connect Store
         </Link>
       </div>
@@ -47,20 +50,25 @@ export default async function StoresPage() {
       <div className="mt-6 space-y-4">
         {(stores ?? []).length > 0 ? (
           (stores ?? []).map((store) => (
-            <div key={store.id} className="rounded-lg border border-border bg-background p-5 shadow-sm">
+            <div
+              key={store.id}
+              className="rounded-lg border border-border bg-background p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">{store.name}</h2>
                   <p className="text-sm text-muted-foreground">{store.url}</p>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  {store.paired_at ? 'Paired' : store.sync_status ?? 'pending'}
+                  {store.paired_at ? 'Paired' : (store.sync_status ?? 'pending')}
                 </span>
               </div>
             </div>
           ))
         ) : (
-          <p className="text-muted-foreground">No stores connected yet. Connect your first WooCommerce store to get started.</p>
+          <p className="text-muted-foreground">
+            No stores connected yet. Connect your first WooCommerce store to get started.
+          </p>
         )}
       </div>
     </div>

@@ -1,14 +1,6 @@
 import { describe, test, expect } from 'vitest';
-import {
-  OrganizationSchema,
-  MembershipRole,
-  OrderVideoStatus,
-} from '../types';
-import {
-  LockOrderRequestSchema,
-  CreateLabelRequestSchema,
-  OrdersListQuerySchema,
-} from '../api';
+import { OrganizationSchema, MembershipRole, OrderVideoStatus } from '../types';
+import { LockOrderRequestSchema, CreateLabelRequestSchema, OrdersListQuerySchema } from '../api';
 
 describe('Zod schemas', () => {
   test('OrganizationSchema validates correctly', () => {

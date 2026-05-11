@@ -8,13 +8,15 @@
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "zod": "^3.23"
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@vitest/coverage-v8": "^3",
     "typescript": "^5.6",
     "vitest": "^3"
   }

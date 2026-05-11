@@ -47,37 +47,34 @@ export function useRecording(sessionId: string) {
     [sessionId]
   );
 
-  const stop = useCallback(
-    async (): Promise<{ path: string; size: number } | null> => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+  const stop = useCallback(async (): Promise<{ path: string; size: number } | null> => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
 
-      const recorder = mediaRecorderRef.current;
-      if (!recorder || recorder.state === 'inactive') {
-        return null;
-      }
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      return null;
+    }
 
-      setState((prev) => ({ ...prev, status: 'stopping' }));
+    setState((prev) => ({ ...prev, status: 'stopping' }));
 
-      return new Promise((resolve) => {
-        recorder.onstop = async () => {
-          setState((prev) => ({ ...prev, status: 'finalizing', isRecording: false }));
-          const result = await window.electronAPI.finalizeVideo(sessionId);
-          setState({ isRecording: false, elapsed: 0, status: 'idle' });
+    return new Promise((resolve) => {
+      recorder.onstop = async () => {
+        setState((prev) => ({ ...prev, status: 'finalizing', isRecording: false }));
+        const result = await window.electronAPI.finalizeVideo(sessionId);
+        setState({ isRecording: false, elapsed: 0, status: 'idle' });
 
-          if (result.success && result.path) {
-            resolve({ path: result.path, size: result.size || 0 });
-          } else {
-            resolve(null);
-          }
-        };
-        recorder.stop();
-      });
-    },
-    [sessionId]
-  );
+        if (result.success && result.path) {
+          resolve({ path: result.path, size: result.size || 0 });
+        } else {
+          resolve(null);
+        }
+      };
+      recorder.stop();
+    });
+  }, [sessionId]);
 
   const cancel = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);

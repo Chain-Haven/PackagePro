@@ -24,18 +24,12 @@ type DiagnoseDashboardIssueInput = {
   failedCheck?: 'heartbeat' | 'orders';
 };
 
-const networkMessagePatterns = [
-  'failed to fetch',
-  'network',
-  'load failed',
-];
+const networkMessagePatterns = ['failed to fetch', 'network', 'load failed'];
 
 const authMessagePatterns = ['unauthorized', 'forbidden'];
 const stationConfigPatterns = ['resource not found', 'station is not assigned'];
 
-export function diagnoseDashboardIssue(
-  input: DiagnoseDashboardIssueInput
-): DashboardHealthIssue {
+export function diagnoseDashboardIssue(input: DiagnoseDashboardIssueInput): DashboardHealthIssue {
   if (input.missingBackendUrl) {
     return {
       code: 'CONFIG_BACKEND_URL_MISSING',
@@ -54,9 +48,7 @@ export function diagnoseDashboardIssue(
       code: 'CONFIG_STATION_MISSING',
       title: 'Station setup is incomplete',
       message: 'The app is missing its organization, store, or station registration details.',
-      fixSteps: [
-        'Reconnect this machine to an existing station or complete setup again.',
-      ],
+      fixSteps: ['Reconnect this machine to an existing station or complete setup again.'],
       autoFixAvailable: false,
     };
   }
@@ -66,9 +58,7 @@ export function diagnoseDashboardIssue(
       code: 'AUTH_SESSION_MISSING',
       title: 'Your desktop sign-in session expired',
       message: 'The station cannot authenticate to the backend until you sign in again.',
-      fixSteps: [
-        'Sign in again to refresh the desktop session.',
-      ],
+      fixSteps: ['Sign in again to refresh the desktop session.'],
       autoFixAvailable: false,
     };
   }
@@ -105,9 +95,7 @@ export function diagnoseDashboardIssue(
       code: 'AUTH_SESSION_MISSING',
       title: 'The backend rejected this station session',
       message: input.rawErrorMessage || 'Sign in again to refresh the desktop session.',
-      fixSteps: [
-        'Sign in again so the station can refresh its backend token.',
-      ],
+      fixSteps: ['Sign in again so the station can refresh its backend token.'],
       autoFixAvailable: false,
     };
   }
@@ -116,10 +104,9 @@ export function diagnoseDashboardIssue(
     return {
       code: 'CONFIG_STATION_MISSING',
       title: 'This station is no longer linked correctly',
-      message: input.rawErrorMessage || 'The backend could not find or accept this station registration.',
-      fixSteps: [
-        'Open setup and reconnect this machine to the correct station.',
-      ],
+      message:
+        input.rawErrorMessage || 'The backend could not find or accept this station registration.',
+      fixSteps: ['Open setup and reconnect this machine to the correct station.'],
       autoFixAvailable: false,
     };
   }

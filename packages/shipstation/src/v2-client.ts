@@ -65,13 +65,11 @@ export class ShipStationV2Client {
     return this.request('PUT', `/v2/labels/${labelId}/void`);
   }
 
-  async getRates(
-    shipmentOrId: {
-      shipment_id?: string;
-      shipment?: V2LabelRequest['shipment'];
-      rate_options?: Record<string, unknown>;
-    }
-  ): Promise<V2RateResponse> {
+  async getRates(shipmentOrId: {
+    shipment_id?: string;
+    shipment?: V2LabelRequest['shipment'];
+    rate_options?: Record<string, unknown>;
+  }): Promise<V2RateResponse> {
     return this.request('POST', '/v2/rates', shipmentOrId);
   }
 

@@ -2,10 +2,7 @@ type ReadEnv = () => {
   CRON_SECRET?: string;
 };
 
-export async function getHealthSnapshot(
-  createAdminClient: () => any,
-  readEnv: ReadEnv
-) {
+export async function getHealthSnapshot(createAdminClient: () => any, readEnv: ReadEnv) {
   const checks = {
     supabase: 'ok' as 'ok' | 'error',
     cron: readEnv().CRON_SECRET ? ('configured' as const) : ('missing' as const),

@@ -18,9 +18,7 @@ export async function apiCall<T>(path: string, options: ApiOptions = {}): Promis
   const { method = 'GET', body, token } = options;
   const API_BASE = await getApiBase();
   const sessionToken =
-    token ||
-    (await getSupabase().auth.getSession()).data.session?.access_token ||
-    undefined;
+    token || (await getSupabase().auth.getSession()).data.session?.access_token || undefined;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -66,13 +64,18 @@ export const api = {
     }>(`/api/admin/health?${new URLSearchParams({ org_id: orgId })}`),
 
   runOperationalSelfHeal: (orgId: string) =>
-    apiCall<{ success: boolean; result: { expiredLocksReleased: number; offlineStationsUpdated: number; stuckUploadsFailed: number; timestamp: string } }>(
-      '/api/admin/self-heal',
-      {
-        method: 'POST',
-        body: { org_id: orgId },
-      }
-    ),
+    apiCall<{
+      success: boolean;
+      result: {
+        expiredLocksReleased: number;
+        offlineStationsUpdated: number;
+        stuckUploadsFailed: number;
+        timestamp: string;
+      };
+    }>('/api/admin/self-heal', {
+      method: 'POST',
+      body: { org_id: orgId },
+    }),
 
   listOrganizations: () =>
     apiCall<{ organizations: Array<{ id: string; name: string; slug: string; role: string }> }>(
@@ -80,32 +83,46 @@ export const api = {
     ),
 
   createOrganization: (body: { name: string; slug: string }) =>
-    apiCall<{ organization: { id: string; name: string; slug: string } }>(
-      '/api/organizations',
-      {
-        method: 'POST',
-        body,
-      }
-    ),
+    apiCall<{ organization: { id: string; name: string; slug: string } }>('/api/organizations', {
+      method: 'POST',
+      body,
+    }),
 
   listStores: (orgId: string) =>
-    apiCall<{ stores: Array<{ id: string; name: string; url: string; paired_at?: string | null; sync_status?: string | null }> }>(
-      `/api/stores?${new URLSearchParams({ org_id: orgId })}`
-    ),
+    apiCall<{
+      stores: Array<{
+        id: string;
+        name: string;
+        url: string;
+        paired_at?: string | null;
+        sync_status?: string | null;
+      }>;
+    }>(`/api/stores?${new URLSearchParams({ org_id: orgId })}`),
 
   listStations: (orgId: string) =>
-    apiCall<{ stations: Array<{ id: string; store_id: string; name: string; machine_id?: string | null; status?: string | null }> }>(
-      `/api/stations?${new URLSearchParams({ org_id: orgId })}`
-    ),
+    apiCall<{
+      stations: Array<{
+        id: string;
+        store_id: string;
+        name: string;
+        machine_id?: string | null;
+        status?: string | null;
+      }>;
+    }>(`/api/stations?${new URLSearchParams({ org_id: orgId })}`),
 
   createStore: (body: { org_id: string; name: string; url: string }) =>
-    apiCall<{ store: { id: string; name: string; url: string; paired_at?: string | null; sync_status?: string | null } }>(
-      '/api/stores',
-      {
-        method: 'POST',
-        body,
-      }
-    ),
+    apiCall<{
+      store: {
+        id: string;
+        name: string;
+        url: string;
+        paired_at?: string | null;
+        sync_status?: string | null;
+      };
+    }>('/api/stores', {
+      method: 'POST',
+      body,
+    }),
 
   pairStore: (storeId: string, pairingCode: string) =>
     apiCall<{ success: boolean; paired_at?: string; store_name?: string }>(
@@ -116,20 +133,21 @@ export const api = {
       }
     ),
 
-  registerStation: (body: { org_id: string; store_id: string; name: string; machine_id?: string }) =>
-    apiCall<{ station: { id: string; name: string } }>(
-      '/api/stations',
-      {
-        method: 'POST',
-        body,
-      }
-    ),
+  registerStation: (body: {
+    org_id: string;
+    store_id: string;
+    name: string;
+    machine_id?: string;
+  }) =>
+    apiCall<{ station: { id: string; name: string } }>('/api/stations', {
+      method: 'POST',
+      body,
+    }),
 
   listOrders: (params: Record<string, string>) =>
     apiCall<{ orders: unknown[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`),
 
-  getOrder: (orderId: string) =>
-    apiCall<{ order: unknown }>(`/api/orders/${orderId}`),
+  getOrder: (orderId: string) => apiCall<{ order: unknown }>(`/api/orders/${orderId}`),
 
   resolveOrder: (params: Record<string, string>) =>
     apiCall<{ order: unknown }>(`/api/orders/resolve?${new URLSearchParams(params)}`),
@@ -160,7 +178,7 @@ export const api = {
           file_name: 'recording.webm',
           content_type: 'video/webm',
         },
-      },
+      }
     ),
 
   refreshUploadUrl: (videoId: string) =>
@@ -173,7 +191,7 @@ export const api = {
 
   finalizeVideo: (
     videoId: string,
-    metadata?: { file_size_bytes?: number; duration_seconds?: number },
+    metadata?: { file_size_bytes?: number; duration_seconds?: number }
   ) =>
     apiCall(`/api/videos/${videoId}/finalize`, {
       method: 'POST',

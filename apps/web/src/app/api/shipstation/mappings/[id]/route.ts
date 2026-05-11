@@ -22,10 +22,7 @@ export async function DELETE(
     }
 
     const { user } = await requireOrgRole(mapping.org_id, ['org_owner', 'org_admin'], request);
-    const { error } = await admin
-      .from('shipstation_store_mappings')
-      .delete()
-      .eq('id', id);
+    const { error } = await admin.from('shipstation_store_mappings').delete().eq('id', id);
 
     if (error) {
       return NextResponse.json({ error: 'Failed to delete mapping' }, { status: 500 });

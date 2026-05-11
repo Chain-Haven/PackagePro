@@ -13,10 +13,10 @@ test('findForbiddenEnvFiles reports forbidden env files', async () => {
 
   const result = await findForbiddenEnvFiles(tempDir);
 
-  assert.deepEqual(
-    result.map((entry) => path.basename(entry)).sort(),
-    ['.env.local', '.env.production']
-  );
+  assert.deepEqual(result.map((entry) => path.basename(entry)).sort(), [
+    '.env.local',
+    '.env.production',
+  ]);
 });
 
 test('findForbiddenEnvFiles returns an empty list when none exist', async () => {

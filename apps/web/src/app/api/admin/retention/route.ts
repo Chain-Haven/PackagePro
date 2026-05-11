@@ -14,7 +14,11 @@ export async function POST(request: NextRequest) {
       .select('store_id, retention_days');
 
     if (!settings || settings.length === 0) {
-      return NextResponse.json({ deleted: 0, message: 'No store settings configured', timestamp: new Date().toISOString() });
+      return NextResponse.json({
+        deleted: 0,
+        message: 'No store settings configured',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     let deletedCount = 0;
@@ -56,10 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const rateLimitCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    await admin
-      .from('request_rate_limits')
-      .delete()
-      .lt('updated_at', rateLimitCutoff);
+    await admin.from('request_rate_limits').delete().lt('updated_at', rateLimitCutoff);
 
     return NextResponse.json({
       deleted: deletedCount,

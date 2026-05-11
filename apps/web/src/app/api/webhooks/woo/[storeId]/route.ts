@@ -2,23 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { handleApiError } from '@/lib/api-utils';
 import { enforceRateLimit, getEncryptionKey } from '@/lib/security';
-import { decryptIfNeeded, verifyHmac, WEBHOOK_RATE_LIMIT_PER_MIN, WEBHOOK_RATE_LIMIT_WINDOW_SECONDS } from '@packagepro/shared';
+import {
+  decryptIfNeeded,
+  verifyHmac,
+  WEBHOOK_RATE_LIMIT_PER_MIN,
+  WEBHOOK_RATE_LIMIT_WINDOW_SECONDS,
+} from '@packagepro/shared';
 import { z } from 'zod';
 
 const WooWebhookEnvelopeSchema = z.object({
   topic: z.string().min(1).max(100).optional(),
-  order: z.object({
-    id: z.number().int(),
-    number: z.string().optional(),
-    order_key: z.string().optional(),
-    status: z.string(),
-    total: z.union([z.string(), z.number()]).optional(),
-    billing_email: z.string().email().optional().nullable(),
-    billing_first_name: z.string().optional().nullable(),
-    billing_last_name: z.string().optional().nullable(),
-    shipping: z.record(z.unknown()).optional().nullable(),
-    line_items: z.array(z.record(z.unknown())).optional(),
-  }).optional(),
+  order: z
+    .object({
+      id: z.number().int(),
+      number: z.string().optional(),
+      order_key: z.string().optional(),
+      status: z.string(),
+      total: z.union([z.string(), z.number()]).optional(),
+      billing_email: z.string().email().optional().nullable(),
+      billing_first_name: z.string().optional().nullable(),
+      billing_last_name: z.string().optional().nullable(),
+      shipping: z.record(z.unknown()).optional().nullable(),
+      line_items: z.array(z.record(z.unknown())).optional(),
+    })
+    .optional(),
 });
 
 export async function POST(
@@ -37,11 +44,7 @@ export async function POST(
 
     const admin = createAdminClient();
 
-    const { data: store } = await admin
-      .from('stores')
-      .select('*')
-      .eq('id', storeId)
-      .single();
+    const { data: store } = await admin.from('stores').select('*').eq('id', storeId).single();
 
     if (!store || !store.webhook_secret) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
@@ -75,7 +78,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 400 });
     }
 
-    const topic = parsedPayload.data.topic || request.headers.get('X-PackagePro-Topic') || 'unknown';
+    const topic =
+      parsedPayload.data.topic || request.headers.get('X-PackagePro-Topic') || 'unknown';
 
     if (idempotencyKey) {
       const { data: existingDelivery } = await admin
@@ -90,14 +94,18 @@ export async function POST(
       }
     }
 
-    const { data: delivery } = await admin.from('webhook_deliveries').insert({
-      store_id: storeId,
-      source: 'woocommerce',
-      topic,
-      payload,
-      idempotency_key: idempotencyKey,
-      status: 'received',
-    }).select('id').single();
+    const { data: delivery } = await admin
+      .from('webhook_deliveries')
+      .insert({
+        store_id: storeId,
+        source: 'woocommerce',
+        topic,
+        payload,
+        idempotency_key: idempotencyKey,
+        status: 'received',
+      })
+      .select('id')
+      .single();
 
     if (parsedPayload.data.order) {
       const orderData = parsedPayload.data.order;
@@ -109,7 +117,9 @@ export async function POST(
         woo_order_key: orderData.order_key || null,
         status: orderData.status,
         customer_email: orderData.billing_email || null,
-        customer_name: [orderData.billing_first_name, orderData.billing_last_name].filter(Boolean).join(' ') || null,
+        customer_name:
+          [orderData.billing_first_name, orderData.billing_last_name].filter(Boolean).join(' ') ||
+          null,
         shipping_address: orderData.shipping || null,
         line_items: orderData.line_items || [],
         order_total: orderData.total || null,

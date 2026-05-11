@@ -15,7 +15,10 @@ export function createConfigUpdater<T extends Record<string, unknown>>(
       return next;
     });
 
-    queue = run.then(() => undefined, () => undefined);
+    queue = run.then(
+      () => undefined,
+      () => undefined
+    );
     return run;
   };
 }

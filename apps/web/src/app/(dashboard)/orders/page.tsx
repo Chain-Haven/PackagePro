@@ -66,7 +66,10 @@ export default async function OrdersPage({
     ordersQuery = ordersQuery.eq('video_status', query.videoStatus);
   }
   if (query.search) {
-    const sanitized = query.search.replace(/[%_\\]/g, '').replace(/[^\w\s@.-]/g, '').slice(0, 100);
+    const sanitized = query.search
+      .replace(/[%_\\]/g, '')
+      .replace(/[^\w\s@.-]/g, '')
+      .slice(0, 100);
     if (sanitized) {
       ordersQuery = ordersQuery.or(
         `woo_order_number.ilike.%${sanitized}%,customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%`
@@ -78,7 +81,9 @@ export default async function OrdersPage({
 
   const orderList: OrderRow[] = orders ?? [];
   const readyToPack = orderList.filter((order) => order.video_status === 'none').length;
-  const inFlight = orderList.filter((order) => ['recording', 'uploading'].includes(order.video_status)).length;
+  const inFlight = orderList.filter((order) =>
+    ['recording', 'uploading'].includes(order.video_status)
+  ).length;
   const completed = orderList.filter((order) => order.video_status === 'ready').length;
   const failed = orderList.filter((order) => order.video_status === 'failed').length;
   const totalOrders = count ?? 0;
@@ -108,7 +113,11 @@ export default async function OrdersPage({
           placeholder="Search order number, customer, or email"
           className="rounded-lg border border-border px-3 py-2 text-sm"
         />
-        <select name="status" defaultValue={query.status} className="rounded-lg border border-border px-3 py-2 text-sm">
+        <select
+          name="status"
+          defaultValue={query.status}
+          className="rounded-lg border border-border px-3 py-2 text-sm"
+        >
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
           <option value="on-hold">On hold</option>
@@ -127,7 +136,10 @@ export default async function OrdersPage({
           <option value="ready">Ready</option>
           <option value="failed">Failed</option>
         </select>
-        <button type="submit" className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">
+        <button
+          type="submit"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+        >
           Apply
         </button>
       </form>
@@ -144,7 +156,9 @@ export default async function OrdersPage({
           Showing {(query.page - 1) * query.perPage + (orderList.length > 0 ? 1 : 0)}-
           {(query.page - 1) * query.perPage + orderList.length} of {totalOrders}
         </span>
-        <span>Page {query.page} of {totalPages}</span>
+        <span>
+          Page {query.page} of {totalPages}
+        </span>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-lg border border-border">
@@ -178,7 +192,9 @@ export default async function OrdersPage({
                   <td className="px-4 py-3">{order.video_status}</td>
                   <td className="px-4 py-3">
                     <div>{order.shipment_status || 'Not purchased'}</div>
-                    <div className="text-xs text-muted-foreground">{order.tracking_number || 'No tracking'}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {order.tracking_number || 'No tracking'}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {order.synced_at ? new Date(order.synced_at).toLocaleString() : 'Never'}
@@ -192,14 +208,20 @@ export default async function OrdersPage({
 
       <div className="mt-4 flex items-center justify-between">
         {query.page > 1 ? (
-          <Link href={buildPageHref(query.page - 1)} className="rounded-lg border border-border px-4 py-2 text-sm">
+          <Link
+            href={buildPageHref(query.page - 1)}
+            className="rounded-lg border border-border px-4 py-2 text-sm"
+          >
             Previous
           </Link>
         ) : (
           <span />
         )}
         {query.page < totalPages ? (
-          <Link href={buildPageHref(query.page + 1)} className="rounded-lg border border-border px-4 py-2 text-sm">
+          <Link
+            href={buildPageHref(query.page + 1)}
+            className="rounded-lg border border-border px-4 py-2 text-sm"
+          >
             Next
           </Link>
         ) : (

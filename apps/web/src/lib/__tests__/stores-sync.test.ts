@@ -104,17 +104,34 @@ describe('store sync route', () => {
       admin,
     });
 
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ([
-          { id: 101, number: '101', status: 'processing', billing: {}, shipping: {}, line_items: [], total: '10.00' },
-          { id: 102, number: '102', status: 'pending', billing: {}, shipping: {}, line_items: [], total: '20.00' },
-        ]),
+        json: async () => [
+          {
+            id: 101,
+            number: '101',
+            status: 'processing',
+            billing: {},
+            shipping: {},
+            line_items: [],
+            total: '10.00',
+          },
+          {
+            id: 102,
+            number: '102',
+            status: 'pending',
+            billing: {},
+            shipping: {},
+            line_items: [],
+            total: '20.00',
+          },
+        ],
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ([]),
+        json: async () => [],
       });
 
     vi.stubGlobal('fetch', fetchMock);

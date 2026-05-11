@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { requireOrderAccess, requireStationAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { writeAuditLog } from '@/lib/audit';
-import {
-  RequestUploadUrlSchema,
-  STORAGE_BUCKET,
-} from '@packagepro/shared';
+import { RequestUploadUrlSchema, STORAGE_BUCKET } from '@packagepro/shared';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +15,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { order: orderRecord, user, admin } = await requireOrderAccess(parsed.data.order_id, request);
+    const {
+      order: orderRecord,
+      user,
+      admin,
+    } = await requireOrderAccess(parsed.data.order_id, request);
     const { station } = await requireStationAccess(parsed.data.station_id, request);
 
     if (station.org_id !== orderRecord.org_id || station.store_id !== orderRecord.store_id) {
@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
       started_at: new Date().toISOString(),
     });
 
-    const { data: signedUrl, error: signError } = await admin
-      .storage
+    const { data: signedUrl, error: signError } = await admin.storage
       .from(STORAGE_BUCKET)
       .createSignedUploadUrl(storagePath);
 
@@ -97,12 +96,15 @@ export async function POST(request: NextRequest) {
       request,
     });
 
-    return NextResponse.json({
-      video_id: video.id,
-      upload_url: signedUrl.signedUrl,
-      storage_path: storagePath,
-      token: signedUrl.token,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        video_id: video.id,
+        upload_url: signedUrl.signedUrl,
+        storage_path: storagePath,
+        token: signedUrl.token,
+      },
+      { status: 201 }
+    );
   } catch (err) {
     return handleApiError(err);
   }

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildCameraConstraintCandidates,
-  selectRecordingMimeType,
-} from '../camera-utils';
+import { buildCameraConstraintCandidates, selectRecordingMimeType } from '../camera-utils';
 
 describe('camera utils', () => {
   it('tries the selected device first and then falls back to generic constraints', () => {

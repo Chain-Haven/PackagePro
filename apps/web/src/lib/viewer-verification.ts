@@ -13,16 +13,9 @@ function normalizeZip(value: string) {
   return value.replace(/\s/g, '').toLowerCase();
 }
 
-export function verifyViewerAccess({
-  email,
-  postalCode,
-  orderEmail,
-  orderZip,
-}: VerificationInput) {
-  const emailOk =
-    email && orderEmail ? normalize(email) === normalize(orderEmail) : null;
-  const zipOk =
-    postalCode && orderZip ? normalizeZip(postalCode) === normalizeZip(orderZip) : null;
+export function verifyViewerAccess({ email, postalCode, orderEmail, orderZip }: VerificationInput) {
+  const emailOk = email && orderEmail ? normalize(email) === normalize(orderEmail) : null;
+  const zipOk = postalCode && orderZip ? normalizeZip(postalCode) === normalizeZip(orderZip) : null;
 
   if (emailOk !== null && zipOk !== null) {
     return emailOk && zipOk;

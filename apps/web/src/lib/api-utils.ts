@@ -44,7 +44,10 @@ export function handleApiError(err: unknown): NextResponse {
     }
     if (err.message.startsWith('INVALID_ENV:')) {
       return NextResponse.json(
-        { error: err.message.replace('INVALID_ENV:', '').trim() || 'Invalid environment configuration' },
+        {
+          error:
+            err.message.replace('INVALID_ENV:', '').trim() || 'Invalid environment configuration',
+        },
         { status: 503 }
       );
     }

@@ -1,13 +1,5 @@
 import Link from 'next/link';
-import {
-  LayoutDashboard,
-  Store,
-  Package,
-  Monitor,
-  Video,
-  FileText,
-  Settings,
-} from 'lucide-react';
+import { LayoutDashboard, Store, Package, Monitor, Video, FileText, Settings } from 'lucide-react';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },

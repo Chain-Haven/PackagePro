@@ -30,9 +30,14 @@ export async function GET(request: NextRequest) {
     if (status) query = query.eq('status', status);
     if (videoStatus) query = query.eq('video_status', videoStatus);
     if (search) {
-      const sanitized = search.replace(/[%_\\]/g, '').replace(/[^\w\s@.-]/g, '').slice(0, 100);
+      const sanitized = search
+        .replace(/[%_\\]/g, '')
+        .replace(/[^\w\s@.-]/g, '')
+        .slice(0, 100);
       if (sanitized) {
-        query = query.or(`woo_order_number.ilike.%${sanitized}%,customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%`);
+        query = query.or(
+          `woo_order_number.ilike.%${sanitized}%,customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%`
+        );
       }
     }
 

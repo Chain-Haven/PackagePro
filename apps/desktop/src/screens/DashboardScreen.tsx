@@ -5,10 +5,7 @@ import { uploadQueue } from '../lib/upload-queue';
 import { api, apiCall } from '../lib/api';
 import { getSupabase } from '../lib/supabase';
 import { STATION_HEARTBEAT_INTERVAL_MS } from '@packagepro/shared';
-import {
-  type DashboardHealthIssue,
-  diagnoseDashboardIssue,
-} from '../lib/dashboard-health';
+import { type DashboardHealthIssue, diagnoseDashboardIssue } from '../lib/dashboard-health';
 import { getDesktopBackendUrl } from '../lib/env';
 
 interface Props {
@@ -66,8 +63,8 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
   }
 
   const fetchOrdersAndStats = useCallback(async () => {
-    const orgId = await window.electronAPI.getConfig('org_id') as string;
-    const storeId = await window.electronAPI.getConfig('store_id') as string;
+    const orgId = (await window.electronAPI.getConfig('org_id')) as string;
+    const storeId = (await window.electronAPI.getConfig('store_id')) as string;
     if (!orgId) {
       throw new Error('Missing organization configuration');
     }
@@ -77,7 +74,9 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
     if (orderFilter === 'pending') params.video_status = 'none';
     if (orderFilter === 'packed') params.video_status = 'ready';
 
-    const res = await apiCall<{ orders: Order[]; total: number }>(`/api/orders?${new URLSearchParams(params)}`);
+    const res = await apiCall<{ orders: Order[]; total: number }>(
+      `/api/orders?${new URLSearchParams(params)}`
+    );
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -111,7 +110,7 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
 
   const loadOrgRole = useCallback(async () => {
     try {
-      const orgId = await window.electronAPI.getConfig('org_id') as string;
+      const orgId = (await window.electronAPI.getConfig('org_id')) as string;
       if (!orgId) return;
       const { organizations } = await api.listOrganizations();
       const currentOrg = organizations.find((organization) => organization.id === orgId);
@@ -121,18 +120,17 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
     }
   }, []);
 
-  async function handleStationFailure(
-    failedCheck: 'heartbeat' | 'orders',
-    sourceError: unknown
-  ) {
+  async function handleStationFailure(failedCheck: 'heartbeat' | 'orders', sourceError: unknown) {
     setStationStatus('error');
     setAutoFixing(true);
 
     const backendUrl = await window.electronAPI.getConfig('backend_url');
-    const orgId = await window.electronAPI.getConfig('org_id') as string;
-    const storeId = await window.electronAPI.getConfig('store_id') as string;
+    const orgId = (await window.electronAPI.getConfig('org_id')) as string;
+    const storeId = (await window.electronAPI.getConfig('store_id')) as string;
     const currentStationId = (await window.electronAPI.getConfig('station_id')) as string | null;
-    const { data: { session } } = await getSupabase().auth.getSession();
+    const {
+      data: { session },
+    } = await getSupabase().auth.getSession();
 
     if (typeof backendUrl !== 'string' || !backendUrl) {
       try {
@@ -160,7 +158,11 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
     try {
       const health = await api.getHealth();
       backendDegraded = health.status === 'degraded';
-      if (backendDegraded && orgRole && ['org_owner', 'org_admin', 'warehouse_manager'].includes(orgRole)) {
+      if (
+        backendDegraded &&
+        orgRole &&
+        ['org_owner', 'org_admin', 'warehouse_manager'].includes(orgRole)
+      ) {
         await api.runOperationalSelfHeal(orgId).catch(() => {});
       }
     } catch {
@@ -182,7 +184,9 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
           missingBackendUrl: typeof backendUrl !== 'string' || !backendUrl,
           backendDegraded,
           rawErrorMessage:
-            recoveryError instanceof Error ? recoveryError.message : String(recoveryError ?? sourceError),
+            recoveryError instanceof Error
+              ? recoveryError.message
+              : String(recoveryError ?? sourceError),
           failedCheck,
         })
       );
@@ -218,18 +222,22 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
   async function handleSearch() {
     if (!searchQuery.trim()) return;
     try {
-      const orgId = await window.electronAPI.getConfig('org_id') as string;
+      const orgId = (await window.electronAPI.getConfig('org_id')) as string;
       if (!orgId) return;
-      const res = await apiCall<{ orders: Order[] }>(`/api/orders?${new URLSearchParams({ org_id: orgId, search: searchQuery, per_page: '20' })}`);
+      const res = await apiCall<{ orders: Order[] }>(
+        `/api/orders?${new URLSearchParams({ org_id: orgId, search: searchQuery, per_page: '20' })}`
+      );
       setSearchResults(res.orders ?? []);
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
 
   async function handleScan(barcode: string) {
     setScanError('');
     try {
-      const orgId = await window.electronAPI.getConfig('org_id') as string;
-      const storeId = await window.electronAPI.getConfig('store_id') as string;
+      const orgId = (await window.electronAPI.getConfig('org_id')) as string;
+      const storeId = (await window.electronAPI.getConfig('store_id')) as string;
       if (!orgId) {
         setScanError('Station is missing its organization configuration');
         return;
@@ -255,8 +263,20 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
   }
 
   const videoStatusBadge = (vs: string) => {
-    const colors: Record<string, string> = { none: 'bg-muted text-muted-foreground', recording: 'bg-amber-100 text-amber-800', uploading: 'bg-blue-100 text-blue-800', ready: 'bg-emerald-100 text-emerald-800', failed: 'bg-red-100 text-red-800' };
-    return <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${colors[vs] ?? colors.none}`}>{vs}</span>;
+    const colors: Record<string, string> = {
+      none: 'bg-muted text-muted-foreground',
+      recording: 'bg-amber-100 text-amber-800',
+      uploading: 'bg-blue-100 text-blue-800',
+      ready: 'bg-emerald-100 text-emerald-800',
+      failed: 'bg-red-100 text-red-800',
+    };
+    return (
+      <span
+        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${colors[vs] ?? colors.none}`}
+      >
+        {vs}
+      </span>
+    );
   };
 
   return (
@@ -278,7 +298,9 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
               </div>
               {stationIssue.autoFixAvailable && (
                 <button
-                  onClick={() => void handleStationFailure('orders', new Error(stationIssue.message))}
+                  onClick={() =>
+                    void handleStationFailure('orders', new Error(stationIssue.message))
+                  }
                   disabled={autoFixing}
                   className="rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive disabled:opacity-50"
                 >
@@ -313,7 +335,9 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Packing Station</h1>
-            <p className="text-sm text-muted-foreground mt-1">Scan a barcode or select an order below</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Scan a barcode or select an order below
+            </p>
           </div>
           <ScannerInput onScan={handleScan} />
         </div>
@@ -327,14 +351,38 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
           <StatCard label="Orders in Queue" value={String(orders.length)} />
           <StatCard label="Packed Today" value={String(packedToday)} />
           <StatCard label="Uploads Pending" value={String(pendingUploads)} />
-          <StatCard label="Station" value={stationStatus.toUpperCase()} color={stationStatus === 'ready' ? 'text-emerald-600' : stationStatus === 'error' ? 'text-red-600' : ''} />
+          <StatCard
+            label="Station"
+            value={stationStatus.toUpperCase()}
+            color={
+              stationStatus === 'ready'
+                ? 'text-emerald-600'
+                : stationStatus === 'error'
+                  ? 'text-red-600'
+                  : ''
+            }
+          />
         </div>
 
         <div className="flex gap-2 border-b border-border">
-          {([['orders', 'Order Queue'], ['search', 'Search'], ['uploads', 'Upload Queue']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
+          {(
+            [
+              ['orders', 'Order Queue'],
+              ['search', 'Search'],
+              ['uploads', 'Upload Queue'],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+            >
               {label}
-              {key === 'uploads' && pendingUploads > 0 && <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">{pendingUploads}</span>}
+              {key === 'uploads' && pendingUploads > 0 && (
+                <span className="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                  {pendingUploads}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -344,11 +392,19 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
             <div>
               <div className="flex gap-2 mb-3">
                 {(['pending', 'packed', 'all'] as const).map((f) => (
-                  <button key={f} onClick={() => setOrderFilter(f)} className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${orderFilter === f ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                  <button
+                    key={f}
+                    onClick={() => setOrderFilter(f)}
+                    className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${orderFilter === f ? 'bg-primary text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                  >
                     {f === 'pending' ? 'Ready to Pack' : f === 'packed' ? 'Packed' : 'All'}
                   </button>
                 ))}
-                <button onClick={() => loadOrders()} disabled={ordersLoading} className="ml-auto rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted">
+                <button
+                  onClick={() => loadOrders()}
+                  disabled={ordersLoading}
+                  className="ml-auto rounded-full px-3 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted"
+                >
                   {ordersLoading ? 'Loading...' : 'Refresh'}
                 </button>
               </div>
@@ -356,16 +412,24 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
               {orders.length === 0 && !ordersLoading && (
                 <div className="rounded-xl border border-dashed border-border py-12 text-center">
                   <p className="text-lg text-muted-foreground">No orders in queue</p>
-                  <p className="text-sm text-muted-foreground mt-1">Orders will appear here once synced from WooCommerce</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Orders will appear here once synced from WooCommerce
+                  </p>
                 </div>
               )}
 
               <div className="space-y-2">
                 {orders.map((o) => (
-                  <button key={o.id} onClick={() => onStartPacking(o.id)} className="w-full flex items-center justify-between rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-muted/30 transition-colors">
+                  <button
+                    key={o.id}
+                    onClick={() => onStartPacking(o.id)}
+                    className="w-full flex items-center justify-between rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-muted/30 transition-colors"
+                  >
                     <div>
                       <p className="font-bold">#{o.woo_order_number}</p>
-                      <p className="text-xs text-muted-foreground">{o.customer_name} — {o.status}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {o.customer_name} — {o.status}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       {videoStatusBadge(o.video_status)}
@@ -380,12 +444,27 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
           {tab === 'search' && (
             <div>
               <div className="flex gap-2 mb-3">
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} placeholder="Search by order #, name, or email" className="flex-1 rounded-lg border border-border px-4 py-2 text-sm" />
-                <button onClick={handleSearch} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Search</button>
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="Search by order #, name, or email"
+                  className="flex-1 rounded-lg border border-border px-4 py-2 text-sm"
+                />
+                <button
+                  onClick={handleSearch}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Search
+                </button>
               </div>
               <div className="space-y-2">
                 {searchResults.map((o) => (
-                  <button key={o.id} onClick={() => onStartPacking(o.id)} className="w-full flex items-center justify-between rounded-xl border border-border p-4 text-left hover:border-primary/40 transition-colors">
+                  <button
+                    key={o.id}
+                    onClick={() => onStartPacking(o.id)}
+                    className="w-full flex items-center justify-between rounded-xl border border-border p-4 text-left hover:border-primary/40 transition-colors"
+                  >
                     <div>
                       <p className="font-bold">#{o.woo_order_number}</p>
                       <p className="text-xs text-muted-foreground">{o.customer_name}</p>
@@ -397,9 +476,7 @@ export function DashboardScreen({ stationId, onLogout, onOpenSetup, onStartPacki
             </div>
           )}
 
-          {tab === 'uploads' && (
-            <UploadQueueTab />
-          )}
+          {tab === 'uploads' && <UploadQueueTab />}
         </div>
       </div>
     </div>
@@ -410,21 +487,36 @@ function UploadQueueTab() {
   const [jobs, setJobs] = useState(uploadQueue.getJobs());
   useEffect(() => uploadQueue.subscribe(setJobs), []);
 
-  if (jobs.length === 0) return <p className="py-8 text-center text-muted-foreground">No pending uploads</p>;
+  if (jobs.length === 0)
+    return <p className="py-8 text-center text-muted-foreground">No pending uploads</p>;
 
   return (
     <div className="space-y-2">
       {jobs.map((j) => (
-        <div key={j.id} className="flex items-center justify-between rounded-xl border border-border p-3">
+        <div
+          key={j.id}
+          className="flex items-center justify-between rounded-xl border border-border p-3"
+        >
           <div>
             <p className="text-sm font-medium">{j.videoId.slice(0, 12)}...</p>
-            <p className="text-xs text-muted-foreground">Attempt {j.attempts} — {j.status}</p>
+            <p className="text-xs text-muted-foreground">
+              Attempt {j.attempts} — {j.status}
+            </p>
             {j.lastError && <p className="text-xs text-destructive">{j.lastError}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${j.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : j.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}>{j.status}</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${j.status === 'completed' ? 'bg-emerald-100 text-emerald-800' : j.status === 'failed' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}`}
+            >
+              {j.status}
+            </span>
             {j.status === 'failed' && (
-              <button onClick={() => uploadQueue.retryFailed(j.id)} className="text-xs text-primary font-semibold hover:underline">Retry</button>
+              <button
+                onClick={() => uploadQueue.retryFailed(j.id)}
+                className="text-xs text-primary font-semibold hover:underline"
+              >
+                Retry
+              </button>
             )}
           </div>
         </div>

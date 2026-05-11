@@ -18,7 +18,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { order_id, carrier_id, service_code, ship_from, ship_to, packages: pkgs, account_id } = parsed.data;
+    const {
+      order_id,
+      carrier_id,
+      service_code,
+      ship_from,
+      ship_to,
+      packages: pkgs,
+      account_id,
+    } = parsed.data;
 
     const admin = createAdminClient();
     const { order: accessibleOrder, user } = await requireOrderAccess(order_id, request);
@@ -71,7 +79,10 @@ export async function POST(request: NextRequest) {
         carrier_id,
         service_code,
         ship_to: ship_to || {
-          name: order.customer_name || [shippingAddress.first_name, shippingAddress.last_name].filter(Boolean).join(' ') || '',
+          name:
+            order.customer_name ||
+            [shippingAddress.first_name, shippingAddress.last_name].filter(Boolean).join(' ') ||
+            '',
           address_line1: shippingAddress.address_1 || shippingAddress.address_line1 || '',
           address_line2: shippingAddress.address_2 || shippingAddress.address_line2 || '',
           city_locality: shippingAddress.city || shippingAddress.city_locality || '',
@@ -105,11 +116,14 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     });
 
-    await admin.from('orders').update({
-      shipstation_order_id: label.label_id,
-      tracking_number: label.tracking_number,
-      shipment_status: label.status,
-    }).eq('id', order_id);
+    await admin
+      .from('orders')
+      .update({
+        shipstation_order_id: label.label_id,
+        tracking_number: label.tracking_number,
+        shipment_status: label.status,
+      })
+      .eq('id', order_id);
 
     await writeAuditLog({
       admin,

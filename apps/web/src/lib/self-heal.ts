@@ -1,7 +1,4 @@
-export async function runOperationalSelfHeal(
-  admin: any,
-  orgId?: string
-) {
+export async function runOperationalSelfHeal(admin: any, orgId?: string) {
   const nowIso = new Date().toISOString();
   const offlineCutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString();
   const stuckCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -9,10 +6,7 @@ export async function runOperationalSelfHeal(
   let expiredLockIds: string[] = [];
 
   if (orgId) {
-    const { data: orgOrders } = await admin
-      .from('orders')
-      .select('id')
-      .eq('org_id', orgId);
+    const { data: orgOrders } = await admin.from('orders').select('id').eq('org_id', orgId);
     const orderIds = (orgOrders ?? []).map((row: { id: string }) => row.id);
 
     if (orderIds.length > 0) {
@@ -36,10 +30,7 @@ export async function runOperationalSelfHeal(
   }
 
   if (expiredLockIds.length > 0) {
-    await admin
-      .from('order_locks')
-      .update({ released_at: nowIso })
-      .in('id', expiredLockIds);
+    await admin.from('order_locks').update({ released_at: nowIso }).in('id', expiredLockIds);
   }
 
   let offlineStationsUpdated = 0;
@@ -64,16 +55,17 @@ export async function runOperationalSelfHeal(
       .lt('started_at', stuckCutoff);
 
     const videoIds = (stuckUploadRows ?? []).map((row: { video_id: string }) => row.video_id);
-    const { data: videos } = videoIds.length > 0
-      ? await admin
-          .from('videos')
-          .select('id, order_id')
-          .eq('org_id', orgId)
-          .in('id', videoIds)
-      : { data: [] as VideoRef[] };
+    const { data: videos } =
+      videoIds.length > 0
+        ? await admin.from('videos').select('id, order_id').eq('org_id', orgId).in('id', videoIds)
+        : { data: [] as VideoRef[] };
 
-    const videoMap = new Map<string, VideoRef>((videos ?? []).map((video: VideoRef) => [video.id, video]));
-    const matchingRows = (stuckUploadRows ?? []).filter((row: { video_id: string }) => videoMap.has(row.video_id));
+    const videoMap = new Map<string, VideoRef>(
+      (videos ?? []).map((video: VideoRef) => [video.id, video])
+    );
+    const matchingRows = (stuckUploadRows ?? []).filter((row: { video_id: string }) =>
+      videoMap.has(row.video_id)
+    );
     stuckUploadIds = matchingRows.map((row: { id: string }) => row.id);
     stuckVideoRefs = matchingRows.map((row: { video_id: string }) => ({
       video_id: row.video_id,
@@ -89,11 +81,10 @@ export async function runOperationalSelfHeal(
     stuckUploadIds = (stuckUploadRows ?? []).map((row: { id: string }) => row.id);
     if (stuckUploadIds.length > 0) {
       const videoIds = (stuckUploadRows ?? []).map((row: { video_id: string }) => row.video_id);
-      const { data: videos } = await admin
-        .from('videos')
-        .select('id, order_id')
-        .in('id', videoIds);
-      const videoMap = new Map<string, VideoRef>((videos ?? []).map((video: VideoRef) => [video.id, video]));
+      const { data: videos } = await admin.from('videos').select('id, order_id').in('id', videoIds);
+      const videoMap = new Map<string, VideoRef>(
+        (videos ?? []).map((video: VideoRef) => [video.id, video])
+      );
       stuckVideoRefs = (stuckUploadRows ?? []).map((row: { video_id: string }) => ({
         video_id: row.video_id,
         order_id: (videoMap.get(row.video_id) as VideoRef | undefined)?.order_id ?? null,

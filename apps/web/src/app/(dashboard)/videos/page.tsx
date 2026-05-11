@@ -46,7 +46,9 @@ export default async function VideosPage() {
       .eq('status', 'uploading'),
     supabase
       .from('videos')
-      .select('id, status, ready_at, created_at, file_size_bytes, duration_seconds, orders(woo_order_number, customer_name)')
+      .select(
+        'id, status, ready_at, created_at, file_size_bytes, duration_seconds, orders(woo_order_number, customer_name)'
+      )
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -97,7 +99,9 @@ export default async function VideosPage() {
               videoList.map((video) => (
                 <tr key={video.id} className="border-t border-border">
                   <td className="px-4 py-3">
-                    <div className="font-medium">#{video.orders?.woo_order_number || 'Unknown'}</div>
+                    <div className="font-medium">
+                      #{video.orders?.woo_order_number || 'Unknown'}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {video.orders?.customer_name || 'Unknown customer'}
                     </div>

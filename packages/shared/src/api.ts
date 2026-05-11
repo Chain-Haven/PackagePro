@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { OrderVideoStatus } from './types';
-import {
-  ALLOWED_VIDEO_CONTENT_TYPES,
-  MAX_VIDEO_FILE_SIZE_BYTES,
-} from './constants';
+import { ALLOWED_VIDEO_CONTENT_TYPES, MAX_VIDEO_FILE_SIZE_BYTES } from './constants';
 
 // Store pairing
 export const PairStoreRequestSchema = z.object({
@@ -131,26 +128,28 @@ export const OrdersListQuerySchema = z.object({
 export const WooWebhookPayloadSchema = z
   .object({
     topic: z.string().optional(),
-    order: z.object({
-      id: z.number().int(),
-      number: z.string().optional(),
-      order_key: z.string().optional(),
-      status: z.string(),
-      date_created: z.string().optional(),
-      billing_email: z.string().email().optional().nullable(),
-      billing_first_name: z.string().optional().nullable(),
-      billing_last_name: z.string().optional().nullable(),
-      shipping: z.record(z.unknown()).optional().nullable(),
-      line_items: z.array(z.record(z.unknown())).optional(),
-      total: z.union([z.string(), z.number()]).optional(),
-      meta_data: z
-        .array(
-          z.object({
-            key: z.string(),
-            value: z.unknown(),
-          })
-        )
-        .optional(),
-    }).optional(),
+    order: z
+      .object({
+        id: z.number().int(),
+        number: z.string().optional(),
+        order_key: z.string().optional(),
+        status: z.string(),
+        date_created: z.string().optional(),
+        billing_email: z.string().email().optional().nullable(),
+        billing_first_name: z.string().optional().nullable(),
+        billing_last_name: z.string().optional().nullable(),
+        shipping: z.record(z.unknown()).optional().nullable(),
+        line_items: z.array(z.record(z.unknown())).optional(),
+        total: z.union([z.string(), z.number()]).optional(),
+        meta_data: z
+          .array(
+            z.object({
+              key: z.string(),
+              value: z.unknown(),
+            })
+          )
+          .optional(),
+      })
+      .optional(),
   })
   .passthrough();

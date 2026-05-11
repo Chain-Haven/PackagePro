@@ -7,7 +7,13 @@ interface Props {
   onLogout: () => void;
 }
 
-type WizardStep = 'loading' | 'create-org' | 'select-store' | 'pair-plugin' | 'register-station' | 'ready';
+type WizardStep =
+  | 'loading'
+  | 'create-org'
+  | 'select-store'
+  | 'pair-plugin'
+  | 'register-station'
+  | 'ready';
 
 interface Org {
   id: string;
@@ -38,7 +44,7 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
   const [loading, setLoading] = useState(false);
 
   const [userEmail, setUserEmail] = useState('');
-  const [orgs, setOrgs] = useState<Org[]>([]);
+  const [_orgs, setOrgs] = useState<Org[]>([]);
   const [selectedOrg, setSelectedOrg] = useState<Org | null>(null);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
@@ -54,7 +60,9 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
   const loadState = useCallback(async () => {
     setError('');
     const supabase = getSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
     setUserEmail(user.email ?? '');
 
@@ -119,7 +127,11 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
     setError('');
 
     try {
-      const slug = orgName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const slug = orgName
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
       const { organization } = await api.createOrganization({ name: orgName, slug });
       const org: Org = organization;
 
@@ -259,16 +271,23 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
       <div className="w-full max-w-lg">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Station Setup</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Station Setup
+            </p>
             <h1 className="text-2xl font-bold">Configure this packing station</h1>
           </div>
-          <button onClick={onLogout} className="text-xs text-muted-foreground hover:text-foreground">
+          <button
+            onClick={onLogout}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
             Sign out
           </button>
         </div>
 
         {userEmail && (
-          <p className="mb-4 text-sm text-muted-foreground">Signed in as <span className="font-medium text-foreground">{userEmail}</span></p>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{userEmail}</span>
+          </p>
         )}
 
         {error && (
@@ -285,9 +304,14 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         )}
 
         {step === 'create-org' && (
-          <form onSubmit={handleCreateOrg} className="rounded-xl border border-border bg-background p-6 space-y-4">
+          <form
+            onSubmit={handleCreateOrg}
+            className="rounded-xl border border-border bg-background p-6 space-y-4"
+          >
             <h2 className="text-lg font-bold">Create your organization</h2>
-            <p className="text-sm text-muted-foreground">This is the workspace that owns your stores, stations, and videos.</p>
+            <p className="text-sm text-muted-foreground">
+              This is the workspace that owns your stores, stations, and videos.
+            </p>
             <div>
               <label className="block text-xs font-medium mb-1">Organization name</label>
               <input
@@ -311,7 +335,9 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         {step === 'select-store' && (
           <div className="rounded-xl border border-border bg-background p-6 space-y-4">
             <h2 className="text-lg font-bold">Connect a WooCommerce store</h2>
-            <p className="text-sm text-muted-foreground">Select an existing store or create a new one.</p>
+            <p className="text-sm text-muted-foreground">
+              Select an existing store or create a new one.
+            </p>
 
             {stores.length > 0 && (
               <div className="space-y-2">
@@ -324,7 +350,7 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
                     <p className="font-semibold">{store.name}</p>
                     <p className="text-xs text-muted-foreground">{store.url}</p>
                     <span className="mt-1 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      {store.paired_at ? 'Paired' : store.sync_status ?? 'pending'}
+                      {store.paired_at ? 'Paired' : (store.sync_status ?? 'pending')}
                     </span>
                   </button>
                 ))}
@@ -361,20 +387,38 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         )}
 
         {step === 'pair-plugin' && selectedStore && (
-          <form onSubmit={handlePairPlugin} className="rounded-xl border border-border bg-background p-6 space-y-4">
+          <form
+            onSubmit={handlePairPlugin}
+            className="rounded-xl border border-border bg-background p-6 space-y-4"
+          >
             <h2 className="text-lg font-bold">Pair the WooCommerce plugin</h2>
             <p className="text-sm text-muted-foreground">
-              Open your store admin at <span className="font-medium text-foreground">{selectedStore.url}</span>, go to
-              <strong> WooCommerce &rarr; PackagePro</strong>, and copy the pairing code displayed there.
+              Open your store admin at{' '}
+              <span className="font-medium text-foreground">{selectedStore.url}</span>, go to
+              <strong> WooCommerce &rarr; PackagePro</strong>, and copy the pairing code displayed
+              there.
             </p>
 
             <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">Steps</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-2">
+                Steps
+              </p>
               <ol className="space-y-1.5 text-xs text-muted-foreground">
-                <li><span className="font-semibold text-foreground">1.</span> Install the PackagePro plugin on your WooCommerce store</li>
-                <li><span className="font-semibold text-foreground">2.</span> Open WP Admin &rarr; WooCommerce &rarr; PackagePro</li>
-                <li><span className="font-semibold text-foreground">3.</span> Copy the pairing code shown on that page</li>
-                <li><span className="font-semibold text-foreground">4.</span> Paste it below</li>
+                <li>
+                  <span className="font-semibold text-foreground">1.</span> Install the PackagePro
+                  plugin on your WooCommerce store
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">2.</span> Open WP Admin &rarr;
+                  WooCommerce &rarr; PackagePro
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">3.</span> Copy the pairing code
+                  shown on that page
+                </li>
+                <li>
+                  <span className="font-semibold text-foreground">4.</span> Paste it below
+                </li>
               </ol>
             </div>
 
@@ -410,7 +454,10 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         )}
 
         {step === 'register-station' && (
-          <form onSubmit={handleRegisterStation} className="rounded-xl border border-border bg-background p-6 space-y-4">
+          <form
+            onSubmit={handleRegisterStation}
+            className="rounded-xl border border-border bg-background p-6 space-y-4"
+          >
             <h2 className="text-lg font-bold">Register this station</h2>
             <p className="text-sm text-muted-foreground">
               Name this packing bench. Each station gets its own order lock and audit trail.
@@ -427,7 +474,9 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
                       className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-left text-sm hover:border-primary/40"
                     >
                       <span>{station.name}</span>
-                      <span className="text-xs text-muted-foreground">{station.status || 'offline'}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {station.status || 'offline'}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -456,7 +505,13 @@ export function SetupWizardScreen({ onComplete, onLogout }: Props) {
         {step === 'ready' && (
           <div className="rounded-xl border border-border bg-background p-8 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
-              <svg className="h-8 w-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg
+                className="h-8 w-8 text-success"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={3}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -501,7 +556,9 @@ function StepIndicator({ current }: { current: WizardStep }) {
             >
               {isDone ? '✓' : i + 1}
             </div>
-            <span className={`text-xs ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+            <span
+              className={`text-xs ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
+            >
               {s.label}
             </span>
             {i < steps.length - 1 && <div className="h-px w-4 bg-border" />}

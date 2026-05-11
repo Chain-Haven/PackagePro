@@ -37,18 +37,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = CreateStoreSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
 
     const normalizedUrl = normalizeExternalUrl(parsed.data.url, {
       allowHttpLocalhost: process.env.NODE_ENV !== 'production',
       requirePathlessBase: true,
     });
-    const { user } = await requireOrgRole(
-      parsed.data.org_id,
-      ['org_owner', 'org_admin'],
-      request
-    );
+    const { user } = await requireOrgRole(parsed.data.org_id, ['org_owner', 'org_admin'], request);
     const admin = createAdminClient();
 
     const { data: store, error } = await admin

@@ -36,7 +36,9 @@ export function isEncryptedValue(value: string | null | undefined): value is str
   if (!value) return false;
   const parts = value.split(':');
   if (parts.length !== 3) return false;
-  return parts.every((part) => part.length > 0 && part.length % 2 === 0 && ENCRYPTED_SEGMENT.test(part));
+  return parts.every(
+    (part) => part.length > 0 && part.length % 2 === 0 && ENCRYPTED_SEGMENT.test(part)
+  );
 }
 
 export function encryptIfNeeded(plaintext: string, key: string): string {
@@ -58,7 +60,9 @@ export function hashToken(token: string): string {
 export function generatePairingCode(length: number = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const bytes = randomBytes(length);
-  return Array.from(bytes).map((b) => chars[b % chars.length]).join('');
+  return Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join('');
 }
 
 export function generateHmac(payload: string, secret: string): string {

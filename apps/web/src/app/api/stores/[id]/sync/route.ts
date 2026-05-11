@@ -34,10 +34,7 @@ type WooOrder = {
 
 const SYNC_UPSERT_BATCH_SIZE = 500;
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: storeId } = await params;
     const { store, user, admin } = await requireStoreAccess(storeId, request, [
@@ -72,10 +69,7 @@ export async function POST(
     let synced = 0;
     let total = 0;
 
-    await admin
-      .from('stores')
-      .update({ sync_status: 'syncing' })
-      .eq('id', storeId);
+    await admin.from('stores').update({ sync_status: 'syncing' }).eq('id', storeId);
 
     const wcOrders: WooOrder[] = [];
     for (let page = 1; page <= 20; page += 1) {
@@ -109,25 +103,26 @@ export async function POST(
 
     const syncedAt = new Date().toISOString();
     const allOrderData = wcOrders.map((wcOrder) => ({
-        org_id: store.org_id,
-        store_id: storeId,
-        woo_order_id: wcOrder.id,
-        woo_order_number: wcOrder.number || String(wcOrder.id),
-        woo_order_key: wcOrder.order_key || null,
-        status: wcOrder.status,
-        customer_email: wcOrder.billing?.email || null,
-        customer_name: [wcOrder.billing?.first_name, wcOrder.billing?.last_name].filter(Boolean).join(' ') || null,
-        shipping_address: wcOrder.shipping || null,
-        line_items: (wcOrder.line_items || []).map((item) => ({
-          id: item.id,
-          name: item.name,
-          sku: item.sku || null,
-          quantity: item.quantity,
-          total: item.total || null,
-        })),
-        order_total: wcOrder.total || null,
-        synced_at: syncedAt,
-      }));
+      org_id: store.org_id,
+      store_id: storeId,
+      woo_order_id: wcOrder.id,
+      woo_order_number: wcOrder.number || String(wcOrder.id),
+      woo_order_key: wcOrder.order_key || null,
+      status: wcOrder.status,
+      customer_email: wcOrder.billing?.email || null,
+      customer_name:
+        [wcOrder.billing?.first_name, wcOrder.billing?.last_name].filter(Boolean).join(' ') || null,
+      shipping_address: wcOrder.shipping || null,
+      line_items: (wcOrder.line_items || []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku || null,
+        quantity: item.quantity,
+        total: item.total || null,
+      })),
+      order_total: wcOrder.total || null,
+      synced_at: syncedAt,
+    }));
 
     total = allOrderData.length;
 
@@ -142,10 +137,13 @@ export async function POST(
       }
     }
 
-    await admin.from('stores').update({
-      sync_status: 'synced',
-      last_sync_at: new Date().toISOString(),
-    }).eq('id', storeId);
+    await admin
+      .from('stores')
+      .update({
+        sync_status: 'synced',
+        last_sync_at: new Date().toISOString(),
+      })
+      .eq('id', storeId);
 
     await writeAuditLog({
       admin,

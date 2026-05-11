@@ -10,11 +10,7 @@ const PUBLIC_PAGE_PREFIXES = [
   '/terms',
 ];
 
-const PUBLIC_API_PREFIXES = [
-  '/api/health',
-  '/api/webhooks/',
-  '/api/viewer/',
-];
+const PUBLIC_API_PREFIXES = ['/api/health', '/api/webhooks/', '/api/viewer/'];
 
 export function isPublicPath(pathname: string) {
   return pathname === '/' || PUBLIC_PAGE_PREFIXES.some((prefix) => pathname.startsWith(prefix));

@@ -6,7 +6,11 @@ import { z } from 'zod';
 
 const CreateOrgSchema = z.object({
   name: z.string().min(1).max(255),
-  slug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/),
 });
 
 export async function GET(request: NextRequest) {
@@ -15,10 +19,12 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const memberships = await getUserMemberships(user.id);
-    return NextResponse.json({ organizations: memberships.map((m: any) => ({
-      ...m.organizations,
-      role: m.role,
-    }))});
+    return NextResponse.json({
+      organizations: memberships.map((m: any) => ({
+        ...m.organizations,
+        role: m.role,
+      })),
+    });
   } catch (err) {
     return handleApiError(err);
   }
@@ -32,7 +38,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = CreateOrgSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
 
     const admin = createAdminClient();
@@ -49,9 +58,7 @@ export async function POST(request: NextRequest) {
       slug: parsed.data.slug,
     };
 
-    const { error: orgError } = await admin
-      .from('organizations')
-      .insert(org);
+    const { error: orgError } = await admin.from('organizations').insert(org);
 
     if (orgError?.code === '23505') {
       return NextResponse.json({ error: 'Slug already taken' }, { status: 409 });

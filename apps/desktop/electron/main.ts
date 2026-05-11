@@ -6,10 +6,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 import { resolveWithin } from './path-utils';
 import { createConfigUpdater } from './config-store';
 import { downloadAndPrintPdf } from './print-label';
-import {
-  readEncryptedRecording,
-  writeEncryptedRecordingFromChunks,
-} from './video-storage';
+import { readEncryptedRecording, writeEncryptedRecordingFromChunks } from './video-storage';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -88,16 +85,12 @@ async function getDataKey() {
 
   const state = await readState();
   if (state.encrypted_data_key) {
-    const decryptedHex = safeStorage.decryptString(
-      Buffer.from(state.encrypted_data_key, 'base64')
-    );
+    const decryptedHex = safeStorage.decryptString(Buffer.from(state.encrypted_data_key, 'base64'));
     return Buffer.from(decryptedHex, 'hex');
   }
 
   const key = randomBytes(32);
-  state.encrypted_data_key = safeStorage
-    .encryptString(key.toString('hex'))
-    .toString('base64');
+  state.encrypted_data_key = safeStorage.encryptString(key.toString('hex')).toString('base64');
   await writeState(state);
   return key;
 }
@@ -254,7 +247,9 @@ ipcMain.handle('video:finalize', async (_event, sessionId: string) => {
   try {
     const sessionDir = resolveSessionDir(sessionId);
     const files = await fs.readdir(sessionDir);
-    const chunks = files.filter((file) => file.startsWith('chunk_') && file.endsWith('.bin')).sort();
+    const chunks = files
+      .filter((file) => file.startsWith('chunk_') && file.endsWith('.bin'))
+      .sort();
 
     if (chunks.length === 0) {
       return { success: false, error: 'No chunks found' };
@@ -308,9 +303,10 @@ ipcMain.handle(
     try {
       const resolvedFilePath = resolveWithin(VIDEOS_DIR, filePath);
       assertAllowedUrl(uploadUrl);
-      const fileBuffer = path.basename(resolvedFilePath) === ENCRYPTED_RECORDING_NAME
-        ? await readEncryptedRecording(resolvedFilePath, await getDataKey())
-        : await readEncryptedFile(resolvedFilePath);
+      const fileBuffer =
+        path.basename(resolvedFilePath) === ENCRYPTED_RECORDING_NAME
+          ? await readEncryptedRecording(resolvedFilePath, await getDataKey())
+          : await readEncryptedFile(resolvedFilePath);
       const response = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {

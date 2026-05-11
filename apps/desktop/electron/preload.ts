@@ -12,12 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Video file operations
   saveVideoChunk: (sessionId: string, chunk: ArrayBuffer) =>
     ipcRenderer.invoke('video:saveChunk', sessionId, chunk),
-  finalizeVideo: (sessionId: string) =>
-    ipcRenderer.invoke('video:finalize', sessionId),
-  getVideoPath: (sessionId: string) =>
-    ipcRenderer.invoke('video:getPath', sessionId),
-  deleteVideo: (sessionId: string) =>
-    ipcRenderer.invoke('video:delete', sessionId),
+  finalizeVideo: (sessionId: string) => ipcRenderer.invoke('video:finalize', sessionId),
+  getVideoPath: (sessionId: string) => ipcRenderer.invoke('video:getPath', sessionId),
+  deleteVideo: (sessionId: string) => ipcRenderer.invoke('video:delete', sessionId),
 
   // Upload
   uploadFile: (filePath: string, uploadUrl: string, token: string) =>

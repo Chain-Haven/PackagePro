@@ -29,7 +29,10 @@ export default async function DocPage({ params }: DocPageProps) {
 
         <div className="mt-10 space-y-8">
           {doc.sections.map((section) => (
-            <section key={section.heading} className="rounded-2xl border border-border bg-background p-6 shadow-sm">
+            <section
+              key={section.heading}
+              className="rounded-2xl border border-border bg-background p-6 shadow-sm"
+            >
               <h2 className="text-2xl font-bold">{section.heading}</h2>
               <div className="mt-4 space-y-3">
                 {section.body.map((paragraph) => (

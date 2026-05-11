@@ -9,5 +9,17 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/**/__tests__/**', 'src/**/*.d.ts', 'electron/**'],
+      thresholds: {
+        lines: 8,
+        functions: 45,
+        branches: 60,
+        statements: 8,
+      },
+    },
   },
 });

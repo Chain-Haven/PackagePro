@@ -91,11 +91,7 @@ export async function requireOrgMember(orgId: string, request?: RequestLike) {
   return { user, membership };
 }
 
-export async function requireOrgRole(
-  orgId: string,
-  allowedRoles: string[],
-  request?: RequestLike
-) {
+export async function requireOrgRole(orgId: string, allowedRoles: string[], request?: RequestLike) {
   const { user, membership } = await requireOrgMember(orgId, request);
 
   if (!allowedRoles.includes(membership.role)) {
@@ -113,11 +109,7 @@ async function requireResourceOrg<T extends Record<string, any> & { org_id: stri
 ) {
   const user = await requireAuth(request);
   const admin = createAdminClient();
-  const { data: resource, error } = await admin
-    .from(table)
-    .select(columns)
-    .eq('id', id)
-    .single();
+  const { data: resource, error } = await admin.from(table).select(columns).eq('id', id).single();
 
   if (error || !resource) {
     throw new ApiError(404, 'Resource not found');
@@ -136,12 +128,9 @@ export async function requireStoreAccess(
   request?: RequestLike,
   allowedRoles?: string[]
 ) {
-  const context = await requireResourceOrg<Record<string, any> & { id: string; org_id: string; url: string }>(
-    'stores',
-    storeId,
-    '*',
-    request
-  );
+  const context = await requireResourceOrg<
+    Record<string, any> & { id: string; org_id: string; url: string }
+  >('stores', storeId, '*', request);
 
   if (allowedRoles && !allowedRoles.includes(context.membership.role)) {
     throw new ApiError(403, 'Forbidden');
@@ -155,12 +144,9 @@ export async function requireStationAccess(
   request?: RequestLike,
   allowedRoles?: string[]
 ) {
-  const context = await requireResourceOrg<Record<string, any> & { id: string; org_id: string; store_id: string }>(
-    'stations',
-    stationId,
-    '*',
-    request
-  );
+  const context = await requireResourceOrg<
+    Record<string, any> & { id: string; org_id: string; store_id: string }
+  >('stations', stationId, '*', request);
 
   if (allowedRoles && !allowedRoles.includes(context.membership.role)) {
     throw new ApiError(403, 'Forbidden');
@@ -174,12 +160,9 @@ export async function requireOrderAccess(
   request?: RequestLike,
   allowedRoles?: string[]
 ) {
-  const context = await requireResourceOrg<Record<string, any> & { id: string; org_id: string; store_id: string }>(
-    'orders',
-    orderId,
-    '*',
-    request
-  );
+  const context = await requireResourceOrg<
+    Record<string, any> & { id: string; org_id: string; store_id: string }
+  >('orders', orderId, '*', request);
 
   if (allowedRoles && !allowedRoles.includes(context.membership.role)) {
     throw new ApiError(403, 'Forbidden');
@@ -193,12 +176,9 @@ export async function requireVideoAccess(
   request?: RequestLike,
   allowedRoles?: string[]
 ) {
-  const context = await requireResourceOrg<Record<string, any> & { id: string; org_id: string; store_id: string; order_id: string }>(
-    'videos',
-    videoId,
-    '*',
-    request
-  );
+  const context = await requireResourceOrg<
+    Record<string, any> & { id: string; org_id: string; store_id: string; order_id: string }
+  >('videos', videoId, '*', request);
 
   if (allowedRoles && !allowedRoles.includes(context.membership.role)) {
     throw new ApiError(403, 'Forbidden');

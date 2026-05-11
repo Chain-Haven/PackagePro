@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStoreAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { buildExternalUrl, enforceRateLimit, getEncryptionKey } from '@/lib/security';
@@ -16,10 +15,7 @@ const PairStoreBodySchema = z.object({
   pairing_code: z.string().trim().min(6).max(64),
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: storeId } = await params;
     const { store, user, admin } = await requireStoreAccess(storeId, request, [
@@ -66,20 +62,23 @@ export async function POST(
       });
     } catch {
       return NextResponse.json(
-        { error: `Could not reach plugin at ${store.url}. Make sure the PackagePro plugin is installed and the store URL is correct.` },
-        { status: 502 },
+        {
+          error: `Could not reach plugin at ${store.url}. Make sure the PackagePro plugin is installed and the store URL is correct.`,
+        },
+        { status: 502 }
       );
     }
 
     if (!pluginResponse.ok) {
       const errorBody = await pluginResponse.json().catch(() => ({}));
-      const msg = (errorBody as { message?: string }).message
-        || (errorBody as { code?: string }).code
-        || `Plugin returned ${pluginResponse.status}`;
+      const msg =
+        (errorBody as { message?: string }).message ||
+        (errorBody as { code?: string }).code ||
+        `Plugin returned ${pluginResponse.status}`;
       return NextResponse.json({ error: `Pairing rejected by plugin: ${msg}` }, { status: 400 });
     }
 
-    const pluginData = await pluginResponse.json() as {
+    const pluginData = (await pluginResponse.json()) as {
       success?: boolean;
       consumer_key?: string;
       consumer_secret?: string;
@@ -103,7 +102,10 @@ export async function POST(
       updateFields.consumer_key_encrypted = encryptIfNeeded(pluginData.consumer_key, encryptionKey);
     }
     if (pluginData.consumer_secret) {
-      updateFields.consumer_secret_encrypted = encryptIfNeeded(pluginData.consumer_secret, encryptionKey);
+      updateFields.consumer_secret_encrypted = encryptIfNeeded(
+        pluginData.consumer_secret,
+        encryptionKey
+      );
     }
     if (pluginData.webhook_secret) {
       updateFields.webhook_secret = encryptIfNeeded(pluginData.webhook_secret, encryptionKey);
@@ -115,7 +117,10 @@ export async function POST(
       .eq('id', storeId);
 
     if (updateError) {
-      return NextResponse.json({ error: 'Store updated on plugin but failed to save locally' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Store updated on plugin but failed to save locally' },
+        { status: 500 }
+      );
     }
 
     await writeAuditLog({

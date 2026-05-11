@@ -1,11 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
-import {
-  hasBearerAuthorization,
-  isPublicApiPath,
-  isPublicPath,
-} from '@/lib/middleware-auth';
+import { hasBearerAuthorization, isPublicApiPath, isPublicPath } from '@/lib/middleware-auth';
 
 function applySecurityHeaders(response: NextResponse, request: NextRequest) {
   response.headers.set(
@@ -33,10 +29,7 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest) {
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   response.headers.set('Cross-Origin-Resource-Policy', 'same-site');
 
-  if (
-    process.env.NODE_ENV === 'production' &&
-    request.nextUrl.protocol === 'https:'
-  ) {
+  if (process.env.NODE_ENV === 'production' && request.nextUrl.protocol === 'https:') {
     response.headers.set(
       'Strict-Transport-Security',
       'max-age=31536000; includeSubDomains; preload'
@@ -49,9 +42,7 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isApiPath = pathname.startsWith('/api/');
-  const isPublicRoute =
-    isPublicPath(pathname) ||
-    isPublicApiPath(pathname);
+  const isPublicRoute = isPublicPath(pathname) || isPublicApiPath(pathname);
   const hasBearerToken = hasBearerAuthorization(request.headers.get('authorization'));
 
   if (isPublicRoute) {
@@ -95,7 +86,9 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     if (isApiPath) {

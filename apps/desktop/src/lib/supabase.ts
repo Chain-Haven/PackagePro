@@ -1,9 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import {
-  getDesktopBackendUrl,
-  getDesktopSupabaseAnonKey,
-  getDesktopSupabaseUrl,
-} from './env';
+import { getDesktopBackendUrl, getDesktopSupabaseAnonKey, getDesktopSupabaseUrl } from './env';
 
 let supabase: SupabaseClient | null = null;
 

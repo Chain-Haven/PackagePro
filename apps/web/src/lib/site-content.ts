@@ -13,7 +13,8 @@ export const docs: DocEntry[] = [
   {
     slug: 'getting-started',
     title: 'Getting Started',
-    description: 'Create your account, set up your organization, and connect your first warehouse station.',
+    description:
+      'Create your account, set up your organization, and connect your first warehouse station.',
     intro:
       'Use this guide to get from a blank account to a working PackagePro workspace with a connected WooCommerce store and the first packing station.',
     sections: [
@@ -73,7 +74,8 @@ export const docs: DocEntry[] = [
   {
     slug: 'woocommerce-plugin',
     title: 'WooCommerce Plugin',
-    description: 'Install the plugin, pair it securely, and expose proof-of-packing data inside WooCommerce.',
+    description:
+      'Install the plugin, pair it securely, and expose proof-of-packing data inside WooCommerce.',
     intro:
       'The PackagePro plugin is HPOS-compatible and uses WooCommerce CRUD APIs to sync order state and attach video metadata back to the store.',
     sections: [
@@ -133,7 +135,8 @@ export const docs: DocEntry[] = [
   {
     slug: 'security',
     title: 'Security Model',
-    description: 'How PackagePro protects customer videos, tenant boundaries, and third-party secrets.',
+    description:
+      'How PackagePro protects customer videos, tenant boundaries, and third-party secrets.',
     intro:
       'Security is part of the main flow, not an afterthought. Video privacy, order isolation, and safe secret handling are core system requirements.',
     sections: [
@@ -163,7 +166,8 @@ export const docs: DocEntry[] = [
   {
     slug: 'api-reference',
     title: 'API Reference',
-    description: 'Summary of the PackagePro API surface for stores, stations, orders, videos, and viewer flows.',
+    description:
+      'Summary of the PackagePro API surface for stores, stations, orders, videos, and viewer flows.',
     intro:
       'The PackagePro API supports onboarding, station registration, order locking, upload finalization, secure viewer access, and reconciliation tasks.',
     sections: [

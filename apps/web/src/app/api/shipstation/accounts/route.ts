@@ -17,8 +17,7 @@ const CreateAccountSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const orgId = request.nextUrl.searchParams.get('org_id');
-    if (!orgId)
-      return NextResponse.json({ error: 'org_id required' }, { status: 400 });
+    if (!orgId) return NextResponse.json({ error: 'org_id required' }, { status: 400 });
 
     await requireOrgMember(orgId, request);
     const admin = createAdminClient();
@@ -45,18 +44,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { user } = await requireOrgRole(
-      parsed.data.org_id,
-      ['org_owner', 'org_admin'],
-      request
-    );
+    const { user } = await requireOrgRole(parsed.data.org_id, ['org_owner', 'org_admin'], request);
     const admin = createAdminClient();
     const encryptionKey = getEncryptionKey();
 
-    const encrypted = encrypt(
-      `${parsed.data.api_key}:${parsed.data.api_secret}`,
-      encryptionKey
-    );
+    const encrypted = encrypt(`${parsed.data.api_key}:${parsed.data.api_secret}`, encryptionKey);
 
     const { data: account, error } = await admin
       .from('shipstation_accounts')
