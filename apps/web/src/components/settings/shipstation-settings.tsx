@@ -225,7 +225,9 @@ export function ShipStationSettings({
           />
           <input
             value={accountForm.api_secret}
-            onChange={(e) => setAccountForm((current) => ({ ...current, api_secret: e.target.value }))}
+            onChange={(e) =>
+              setAccountForm((current) => ({ ...current, api_secret: e.target.value }))
+            }
             placeholder="ShipStation API secret"
             className="rounded-lg border border-border px-3 py-2 text-sm md:col-span-2"
             required
@@ -293,7 +295,8 @@ export function ShipStationSettings({
           )}
           {initialStores.map((store) => {
             const existingMappings = mappingsByStore.get(store.id) ?? [];
-            const mappedAccountId = existingMappings[0]?.shipstation_account_id || accounts[0]?.id || '';
+            const mappedAccountId =
+              existingMappings[0]?.shipstation_account_id || accounts[0]?.id || '';
             const accountStores = remoteStores[mappedAccountId] || [];
 
             return (
@@ -377,16 +380,25 @@ export function ShipStationSettings({
                           document.getElementById(`account-${store.id}`) as HTMLSelectElement | null
                         )?.value;
                         const shipstationStoreId = (
-                          document.getElementById(`shipstation-store-${store.id}`) as HTMLSelectElement | null
+                          document.getElementById(
+                            `shipstation-store-${store.id}`
+                          ) as HTMLSelectElement | null
                         )?.value;
                         const shipstationStoreName = accountStores.find(
                           (remoteStore) => String(remoteStore.storeId) === shipstationStoreId
                         )?.storeName;
 
                         if (accountId && shipstationStoreId && shipstationStoreName) {
-                          void handleSaveMapping(store.id, accountId, shipstationStoreId, shipstationStoreName);
+                          void handleSaveMapping(
+                            store.id,
+                            accountId,
+                            shipstationStoreId,
+                            shipstationStoreName
+                          );
                         } else {
-                          setError('Choose an account and ShipStation store before saving the mapping.');
+                          setError(
+                            'Choose an account and ShipStation store before saving the mapping.'
+                          );
                         }
                       }}
                       className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"

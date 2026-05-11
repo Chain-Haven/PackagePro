@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { buildAuditQueries } from '../audit-page-data';
 
-function createQueryRecorder(table: string, calls: Array<{ table: string; method: string; args: unknown[] }>) {
+function createQueryRecorder(
+  table: string,
+  calls: Array<{ table: string; method: string; args: unknown[] }>
+) {
   const query = {
     eq: vi.fn((column: string, value: unknown) => {
       calls.push({ table, method: 'eq', args: [column, value] });

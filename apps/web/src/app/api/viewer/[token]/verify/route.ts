@@ -48,7 +48,7 @@ export async function POST(
     const video = accessToken.videos as Record<string, unknown>;
 
     const addr = order.shipping_address as Record<string, string> | undefined;
-    const orderZip = addr ? (addr.postcode || addr.postal_code || '') : '';
+    const orderZip = addr ? addr.postcode || addr.postal_code || '' : '';
     const verified = verifyViewerAccess({
       email,
       postalCode: postal_code,
@@ -70,16 +70,10 @@ export async function POST(
 
     const { data: signedUrl } = await admin.storage
       .from(STORAGE_BUCKET)
-      .createSignedUrl(
-        video.storage_path as string,
-        VIDEO_SIGNED_URL_EXPIRY_SECONDS
-      );
+      .createSignedUrl(video.storage_path as string, VIDEO_SIGNED_URL_EXPIRY_SECONDS);
 
     if (!signedUrl) {
-      return NextResponse.json(
-        { error: 'Failed to generate playback URL' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to generate playback URL' }, { status: 500 });
     }
 
     return NextResponse.json({

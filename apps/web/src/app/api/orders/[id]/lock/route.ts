@@ -10,15 +10,15 @@ import {
   ORDER_LOCK_MAX_MINUTES,
 } from '@packagepro/shared';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: orderId } = await params;
     const body = await request.json();
     const stationId = body.station_id;
-    const durationMinutes = Math.min(body.duration_minutes || ORDER_LOCK_DEFAULT_MINUTES, ORDER_LOCK_MAX_MINUTES);
+    const durationMinutes = Math.min(
+      body.duration_minutes || ORDER_LOCK_DEFAULT_MINUTES,
+      ORDER_LOCK_MAX_MINUTES
+    );
 
     if (!stationId) {
       return NextResponse.json({ error: 'station_id required' }, { status: 400 });
@@ -62,12 +62,20 @@ export async function POST(
           details: { station_id: stationId, expires_at: expiresAt },
           request,
         });
-        return NextResponse.json({ lock_id: existingLock.id, order_id: orderId, station_id: stationId, expires_at: expiresAt });
+        return NextResponse.json({
+          lock_id: existingLock.id,
+          order_id: orderId,
+          station_id: stationId,
+          expires_at: expiresAt,
+        });
       }
-      return NextResponse.json({
-        error: 'Order is locked by another station',
-        locked_by_station: existingLock.station_id,
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: 'Order is locked by another station',
+          locked_by_station: existingLock.station_id,
+        },
+        { status: 409 }
+      );
     }
 
     const { data: stationLock } = await admin
@@ -79,10 +87,13 @@ export async function POST(
       .single();
 
     if (stationLock) {
-      return NextResponse.json({
-        error: 'Station already has an active order lock',
-        locked_order_id: stationLock.order_id,
-      }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: 'Station already has an active order lock',
+          locked_order_id: stationLock.order_id,
+        },
+        { status: 409 }
+      );
     }
 
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
@@ -100,10 +111,7 @@ export async function POST(
 
     if (error || !lock) {
       if ((error as { code?: string } | null)?.code === '23505') {
-        return NextResponse.json(
-          { error: 'Order is locked by another station' },
-          { status: 409 }
-        );
+        return NextResponse.json({ error: 'Order is locked by another station' }, { status: 409 });
       }
       return NextResponse.json({ error: 'Failed to create lock' }, { status: 500 });
     }
@@ -120,12 +128,15 @@ export async function POST(
       request,
     });
 
-    return NextResponse.json({
-      lock_id: lock.id,
-      order_id: orderId,
-      station_id: stationId,
-      expires_at: expiresAt,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        lock_id: lock.id,
+        order_id: orderId,
+        station_id: stationId,
+        expires_at: expiresAt,
+      },
+      { status: 201 }
+    );
   } catch (err) {
     return handleApiError(err);
   }

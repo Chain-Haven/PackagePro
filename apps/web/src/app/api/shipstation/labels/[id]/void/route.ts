@@ -7,10 +7,7 @@ import { getEncryptionKey } from '@/lib/security';
 import { decryptIfNeeded } from '@packagepro/shared';
 import { ShipStationV2Client } from '@packagepro/shipstation';
 
-async function handleVoid(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+async function handleVoid(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: labelId } = await params;
     const body = await request.json().catch(() => ({}));
@@ -57,8 +54,7 @@ async function handleVoid(
       account = accountRecord ?? null;
     }
 
-    if (!account)
-      return NextResponse.json({ error: 'Account not found' }, { status: 404 });
+    if (!account) return NextResponse.json({ error: 'Account not found' }, { status: 404 });
 
     const apiKeyData = decryptIfNeeded(account.api_key_encrypted, getEncryptionKey());
     const apiKey = apiKeyData.split(':')[0];
@@ -100,16 +96,10 @@ async function handleVoid(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   return handleVoid(request, context);
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   return handleVoid(request, context);
 }

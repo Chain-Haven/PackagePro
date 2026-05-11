@@ -1,8 +1,4 @@
-export function buildAuditQueries(
-  supabase: any,
-  orgId: string,
-  storeIds: string[]
-) {
+export function buildAuditQueries(supabase: any, orgId: string, storeIds: string[]) {
   return [
     supabase.from('audit_logs').select('id', { count: 'exact', head: true }).eq('org_id', orgId),
     supabase

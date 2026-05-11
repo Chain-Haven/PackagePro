@@ -11,7 +11,10 @@ export async function GET() {
 
   const asset = findAsset(release, 'windows');
   if (!asset) {
-    return NextResponse.json({ error: 'Windows build not found in latest release' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Windows build not found in latest release' },
+      { status: 404 }
+    );
   }
 
   const directUrl = await resolveDirectUrl(asset.browser_download_url);

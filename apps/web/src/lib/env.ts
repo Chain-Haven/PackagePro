@@ -4,7 +4,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  ENCRYPTION_KEY: z.string().regex(/^[0-9a-f]{64}$/i, 'ENCRYPTION_KEY must be 32 bytes encoded as hex'),
+  ENCRYPTION_KEY: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/i, 'ENCRYPTION_KEY must be 32 bytes encoded as hex'),
   NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   VERCEL_URL: z.string().min(1).optional(),
   CRON_SECRET: z.string().min(16).optional(),
@@ -20,7 +22,9 @@ export function getWebEnv(): WebEnv {
 
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
-    throw new Error(`INVALID_ENV:${parsed.error.issues.map((issue) => issue.path.join('.') + ' ' + issue.message).join(', ')}`);
+    throw new Error(
+      `INVALID_ENV:${parsed.error.issues.map((issue) => issue.path.join('.') + ' ' + issue.message).join(', ')}`
+    );
   }
 
   cachedEnv = parsed.data;

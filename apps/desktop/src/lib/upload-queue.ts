@@ -38,10 +38,7 @@ class UploadQueue {
         ...job,
         uploadUrl: undefined,
         uploadToken: undefined,
-        status:
-          job.status === 'uploading' || job.status === 'finalizing'
-            ? 'pending'
-            : job.status,
+        status: job.status === 'uploading' || job.status === 'finalizing' ? 'pending' : job.status,
       }));
     } catch {
       this.jobs = [];
@@ -103,7 +100,8 @@ class UploadQueue {
 
   getPendingCount() {
     this.hydrate();
-    return this.jobs.filter((j) => ['pending', 'uploading', 'finalizing'].includes(j.status)).length;
+    return this.jobs.filter((j) => ['pending', 'uploading', 'finalizing'].includes(j.status))
+      .length;
   }
 
   getJob(jobId: string) {

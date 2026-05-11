@@ -53,15 +53,43 @@ function Nav() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <a href="#how-it-works" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">How It Works</a>
-          <a href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Features</a>
-          <a href="#security" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Security</a>
-          <a href="#pricing" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Pricing</a>
-          <a href="#docs" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">Docs</a>
+          <a
+            href="#how-it-works"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            How It Works
+          </a>
+          <a
+            href="#features"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Features
+          </a>
+          <a
+            href="#security"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Security
+          </a>
+          <a
+            href="#pricing"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Pricing
+          </a>
+          <a
+            href="#docs"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Docs
+          </a>
         </nav>
 
         <div className="flex items-center gap-3">
-          <Link href="/login" className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:block">
+          <Link
+            href="/login"
+            className="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:block"
+          >
             Sign In
           </Link>
           <Link
@@ -99,9 +127,8 @@ function Hero() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-            Record per-order fulfillment videos from your warehouse,
-            print shipping labels, and send customers a secure link
-            to watch their order being packed. All from one app.
+            Record per-order fulfillment videos from your warehouse, print shipping labels, and send
+            customers a secure link to watch their order being packed. All from one app.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -121,7 +148,9 @@ function Hero() {
             </a>
           </div>
 
-          <p className="mt-4 text-xs text-muted-foreground">No credit card required. Works with any WooCommerce store.</p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            No credit card required. Works with any WooCommerce store.
+          </p>
         </div>
 
         {/* App Preview */}
@@ -153,12 +182,17 @@ function Hero() {
               {/* Side panel */}
               <div className="flex flex-col border-l border-border bg-background p-5">
                 <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-center">
-                  <p className="text-[10px] font-medium text-primary uppercase tracking-wider">Active Order</p>
+                  <p className="text-[10px] font-medium text-primary uppercase tracking-wider">
+                    Active Order
+                  </p>
                   <p className="mt-1 text-2xl font-extrabold text-primary">#1042</p>
                 </div>
                 <div className="mt-4 space-y-2">
                   {['Blue Widget x2', 'Red Gadget x1', 'Power Cable x1'].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs">
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-xs"
+                    >
                       <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                       <span className="text-muted-foreground">{item}</span>
                     </div>
@@ -189,14 +223,11 @@ function TrustBar() {
   return (
     <section className="border-y border-border bg-muted/30 py-8">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-12 gap-y-4 px-6">
-        {[
-          'WooCommerce',
-          'ShipStation',
-          'Supabase',
-          'Electron',
-          'HPOS Compatible',
-        ].map((name) => (
-          <span key={name} className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-widest">
+        {['WooCommerce', 'ShipStation', 'Supabase', 'Electron', 'HPOS Compatible'].map((name) => (
+          <span
+            key={name}
+            className="text-sm font-semibold text-muted-foreground/70 uppercase tracking-widest"
+          >
             {name}
           </span>
         ))}
@@ -209,29 +240,54 @@ function TrustBar() {
 
 function HowItWorks() {
   const steps = [
-    { num: '01', icon: ScanBarcode, title: 'Scan order barcode', desc: 'A warehouse worker scans an order barcode or selects an order in the queue. The system locks that order to the station.' },
-    { num: '02', icon: Video, title: 'Record packing video', desc: 'An overhead webcam records only that order being packed. One order, one video, no mixups.' },
-    { num: '03', icon: Printer, title: 'Print shipping label', desc: 'Create and print a ShipStation label from inside the same app. Weight, carrier, service — all in one flow.' },
-    { num: '04', icon: Mail, title: 'Customer gets secure link', desc: 'The video uploads in the background. The customer receives an email with a private, secure link to watch their fulfillment video.' },
+    {
+      num: '01',
+      icon: ScanBarcode,
+      title: 'Scan order barcode',
+      desc: 'A warehouse worker scans an order barcode or selects an order in the queue. The system locks that order to the station.',
+    },
+    {
+      num: '02',
+      icon: Video,
+      title: 'Record packing video',
+      desc: 'An overhead webcam records only that order being packed. One order, one video, no mixups.',
+    },
+    {
+      num: '03',
+      icon: Printer,
+      title: 'Print shipping label',
+      desc: 'Create and print a ShipStation label from inside the same app. Weight, carrier, service — all in one flow.',
+    },
+    {
+      num: '04',
+      icon: Mail,
+      title: 'Customer gets secure link',
+      desc: 'The video uploads in the background. The customer receives an email with a private, secure link to watch their fulfillment video.',
+    },
   ];
 
   return (
     <section id="how-it-works" className="py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">How It Works</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+            How It Works
+          </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
             Four steps. Every order.
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Designed for warehouse staff who pack hundreds of orders a day.
-            No training manual required.
+            Designed for warehouse staff who pack hundreds of orders a day. No training manual
+            required.
           </p>
         </div>
 
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step) => (
-            <div key={step.num} className="group relative rounded-2xl border border-border bg-background p-6 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+            <div
+              key={step.num}
+              className="group relative rounded-2xl border border-border bg-background p-6 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+            >
               <div className="mb-4 flex items-center gap-3">
                 <span className="text-3xl font-extrabold text-muted-foreground/20">{step.num}</span>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
@@ -252,18 +308,66 @@ function HowItWorks() {
 
 function Features() {
   const features = [
-    { icon: Video, title: 'Per-Order Video Capture', desc: 'MediaRecorder-based webcam capture. WebM recorded, transcoded to H.264 MP4 for universal playback. Configurable resolution and framerate.' },
-    { icon: Lock, title: 'One Order Per Station', desc: 'Hardware-enforced single-order locking. A second order cannot be claimed until the first is finalized or released. No accidental associations.' },
-    { icon: Printer, title: 'ShipStation Labels', desc: 'Create, print, void, and reprint shipping labels directly from the packing station. Supports 4x6 and standard label printers.' },
-    { icon: ScanBarcode, title: 'Barcode Scanner First', desc: 'Built for keyboard-wedge barcode scanners. Scan to start, scan to finish. No typing required for daily operations.' },
-    { icon: ShieldCheck, title: 'Secure Video Delivery', desc: 'Private storage, opaque tokens, optional secondary verification (email or ZIP). Customers see only their own video. No enumeration.' },
-    { icon: Mail, title: 'WooCommerce Emails', desc: 'Send branded packing video emails through your store\'s WooCommerce mailer. Templates match your store\'s look and feel.' },
-    { icon: Users, title: 'Multi-Tenant', desc: 'Multiple organizations, stores, stations, and users. Role-based access from org owner down to packer. Support viewer role for customer service.' },
-    { icon: Monitor, title: 'Desktop + Web', desc: 'Electron desktop app for warehouse stations. Next.js admin portal for store owners. Everything syncs through the cloud backend.' },
-    { icon: BarChart3, title: 'Audit Everything', desc: 'Full audit trail of every scan, lock, recording, upload, email send, and video access. Debug sync issues with complete logs.' },
-    { icon: Globe, title: 'HPOS Compatible', desc: 'The WooCommerce plugin works with High-Performance Order Storage. Uses CRUD APIs only. No direct post/postmeta assumptions.' },
-    { icon: Zap, title: 'Resilient Uploads', desc: 'Videos are encrypted locally, uploaded in the background with retry. If the network drops, the clip is safe. Upload resumes on reconnection.' },
-    { icon: Package, title: 'Order Queue', desc: 'Filterable queue showing all packable orders. Status filters, station claim indicators, and real-time updates via Supabase Realtime.' },
+    {
+      icon: Video,
+      title: 'Per-Order Video Capture',
+      desc: 'MediaRecorder-based webcam capture. WebM recorded, transcoded to H.264 MP4 for universal playback. Configurable resolution and framerate.',
+    },
+    {
+      icon: Lock,
+      title: 'One Order Per Station',
+      desc: 'Hardware-enforced single-order locking. A second order cannot be claimed until the first is finalized or released. No accidental associations.',
+    },
+    {
+      icon: Printer,
+      title: 'ShipStation Labels',
+      desc: 'Create, print, void, and reprint shipping labels directly from the packing station. Supports 4x6 and standard label printers.',
+    },
+    {
+      icon: ScanBarcode,
+      title: 'Barcode Scanner First',
+      desc: 'Built for keyboard-wedge barcode scanners. Scan to start, scan to finish. No typing required for daily operations.',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'Secure Video Delivery',
+      desc: 'Private storage, opaque tokens, optional secondary verification (email or ZIP). Customers see only their own video. No enumeration.',
+    },
+    {
+      icon: Mail,
+      title: 'WooCommerce Emails',
+      desc: "Send branded packing video emails through your store's WooCommerce mailer. Templates match your store's look and feel.",
+    },
+    {
+      icon: Users,
+      title: 'Multi-Tenant',
+      desc: 'Multiple organizations, stores, stations, and users. Role-based access from org owner down to packer. Support viewer role for customer service.',
+    },
+    {
+      icon: Monitor,
+      title: 'Desktop + Web',
+      desc: 'Electron desktop app for warehouse stations. Next.js admin portal for store owners. Everything syncs through the cloud backend.',
+    },
+    {
+      icon: BarChart3,
+      title: 'Audit Everything',
+      desc: 'Full audit trail of every scan, lock, recording, upload, email send, and video access. Debug sync issues with complete logs.',
+    },
+    {
+      icon: Globe,
+      title: 'HPOS Compatible',
+      desc: 'The WooCommerce plugin works with High-Performance Order Storage. Uses CRUD APIs only. No direct post/postmeta assumptions.',
+    },
+    {
+      icon: Zap,
+      title: 'Resilient Uploads',
+      desc: 'Videos are encrypted locally, uploaded in the background with retry. If the network drops, the clip is safe. Upload resumes on reconnection.',
+    },
+    {
+      icon: Package,
+      title: 'Order Queue',
+      desc: 'Filterable queue showing all packable orders. Status filters, station claim indicators, and real-time updates via Supabase Realtime.',
+    },
   ];
 
   return (
@@ -278,7 +382,10 @@ function Features() {
 
         <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="rounded-xl border border-border bg-background p-6 transition-all hover:shadow-md">
+            <div
+              key={f.title}
+              className="rounded-xl border border-border bg-background p-6 transition-all hover:shadow-md"
+            >
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <f.icon className="h-5 w-5" />
               </div>
@@ -318,14 +425,17 @@ function SecuritySection() {
               Customer privacy is not optional
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Other customers must never see another customer&apos;s fulfillment video.
-              PackagePro is designed from the ground up with this constraint.
+              Other customers must never see another customer&apos;s fulfillment video. PackagePro
+              is designed from the ground up with this constraint.
             </p>
           </div>
 
           <div className="space-y-3">
             {points.map((point) => (
-              <div key={point} className="flex items-start gap-3 rounded-lg border border-border bg-background p-3.5 transition-colors hover:border-success/30">
+              <div
+                key={point}
+                className="flex items-start gap-3 rounded-lg border border-border bg-background p-3.5 transition-colors hover:border-success/30"
+              >
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 <span className="text-sm leading-snug">{point}</span>
               </div>
@@ -341,17 +451,31 @@ function SecuritySection() {
 
 function IntegrationSection() {
   const integrations = [
-    { name: 'WooCommerce', desc: 'HPOS-compatible plugin with custom REST endpoints, order metabox, email integration, and My Account video links.' },
-    { name: 'ShipStation', desc: 'V1 + V2 API client. List stores, get rates, create labels, void labels, and sync shipment status. Rate-limit aware with backoff.' },
-    { name: 'Supabase', desc: 'Postgres with RLS, Auth, Realtime subscriptions, and private Storage buckets. 17 tables with tenant isolation.' },
-    { name: 'Vercel', desc: 'Next.js 15 admin portal and API deployed to Vercel. Serverless functions for all backend routes.' },
+    {
+      name: 'WooCommerce',
+      desc: 'HPOS-compatible plugin with custom REST endpoints, order metabox, email integration, and My Account video links.',
+    },
+    {
+      name: 'ShipStation',
+      desc: 'V1 + V2 API client. List stores, get rates, create labels, void labels, and sync shipment status. Rate-limit aware with backoff.',
+    },
+    {
+      name: 'Supabase',
+      desc: 'Postgres with RLS, Auth, Realtime subscriptions, and private Storage buckets. 17 tables with tenant isolation.',
+    },
+    {
+      name: 'Vercel',
+      desc: 'Next.js 15 admin portal and API deployed to Vercel. Serverless functions for all backend routes.',
+    },
   ];
 
   return (
     <section className="bg-muted/30 py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Integrations</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+            Integrations
+          </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
             Plugs into your existing stack
           </h2>
@@ -381,9 +505,7 @@ function PricingSection() {
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
             Simple, transparent pricing
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Start free. Scale as you grow.
-          </p>
+          <p className="mt-4 text-lg text-muted-foreground">Start free. Scale as you grow.</p>
         </div>
 
         <div className="mt-16 grid gap-8 lg:grid-cols-3">
@@ -396,13 +518,22 @@ function PricingSection() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">For testing and small operations</p>
             <ul className="mt-6 space-y-3">
-              {['1 store', '1 station', '100 videos/month', '30-day retention', 'Community support'].map((f) => (
+              {[
+                '1 store',
+                '1 station',
+                '100 videos/month',
+                '30-day retention',
+                'Community support',
+              ].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-success" /> {f}
                 </li>
               ))}
             </ul>
-            <Link href="/signup" className="mt-8 block rounded-xl border border-border py-3 text-center text-sm font-semibold transition-colors hover:bg-muted">
+            <Link
+              href="/signup"
+              className="mt-8 block rounded-xl border border-border py-3 text-center text-sm font-semibold transition-colors hover:bg-muted"
+            >
               Get Started Free
             </Link>
           </div>
@@ -419,13 +550,24 @@ function PricingSection() {
             </div>
             <p className="mt-2 text-sm text-muted-foreground">For growing fulfillment operations</p>
             <ul className="mt-6 space-y-3">
-              {['5 stores', '10 stations', 'Unlimited videos', '90-day retention', 'ShipStation integration', 'Email support', 'Custom email templates'].map((f) => (
+              {[
+                '5 stores',
+                '10 stations',
+                'Unlimited videos',
+                '90-day retention',
+                'ShipStation integration',
+                'Email support',
+                'Custom email templates',
+              ].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-success" /> {f}
                 </li>
               ))}
             </ul>
-            <Link href="/signup" className="mt-8 block rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
+            <Link
+              href="/signup"
+              className="mt-8 block rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
               Start Free Trial
             </Link>
           </div>
@@ -436,15 +578,28 @@ function PricingSection() {
             <div className="mt-4">
               <span className="text-4xl font-extrabold">Custom</span>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">For large-scale fulfillment centers</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              For large-scale fulfillment centers
+            </p>
             <ul className="mt-6 space-y-3">
-              {['Unlimited everything', 'Custom retention', 'SSO / SAML', 'Dedicated support', 'SLA guarantee', 'On-prem storage option', 'Custom integrations'].map((f) => (
+              {[
+                'Unlimited everything',
+                'Custom retention',
+                'SSO / SAML',
+                'Dedicated support',
+                'SLA guarantee',
+                'On-prem storage option',
+                'Custom integrations',
+              ].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="h-4 w-4 text-success" /> {f}
                 </li>
               ))}
             </ul>
-            <a href="mailto:sales@packagepro.io" className="mt-8 block rounded-xl border border-border py-3 text-center text-sm font-semibold transition-colors hover:bg-muted">
+            <a
+              href="mailto:sales@packagepro.io"
+              className="mt-8 block rounded-xl border border-border py-3 text-center text-sm font-semibold transition-colors hover:bg-muted"
+            >
               Contact Sales
             </a>
           </div>
@@ -461,7 +616,9 @@ function DocsSection() {
     <section id="docs" className="bg-muted/30 py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Documentation</p>
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">
+            Documentation
+          </p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
             Built to be understood
           </h2>
@@ -478,9 +635,12 @@ function DocsSection() {
               className="group flex flex-col rounded-xl border border-border bg-background p-6 transition-all hover:border-primary/30 hover:shadow-md"
             >
               <h3 className="font-bold">{d.title}</h3>
-              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">{d.description}</p>
+              <p className="mt-1.5 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {d.description}
+              </p>
               <div className="mt-4 flex items-center gap-1 text-sm font-medium text-primary">
-                Read docs <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                Read docs{' '}
+                <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </div>
             </Link>
           ))}
@@ -502,8 +662,8 @@ function DownloadSection() {
             Get started in minutes
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Download the desktop app for your packing station and the WooCommerce plugin for your store.
-            Click any button to start downloading immediately.
+            Download the desktop app for your packing station and the WooCommerce plugin for your
+            store. Click any button to start downloading immediately.
           </p>
         </div>
 
@@ -534,10 +694,22 @@ function DownloadSection() {
         <div className="mt-12 rounded-2xl border border-border bg-muted/30 px-8 py-6">
           <h3 className="text-lg font-bold">Quick setup</h3>
           <ol className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li><span className="font-semibold text-foreground">1.</span> Install the WooCommerce plugin on your store and note the pairing code it generates.</li>
-            <li><span className="font-semibold text-foreground">2.</span> Install the desktop app on your packing station and sign in with your PackagePro account.</li>
-            <li><span className="font-semibold text-foreground">3.</span> Enter the pairing code in the desktop app setup wizard to connect the store.</li>
-            <li><span className="font-semibold text-foreground">4.</span> Scan an order barcode to start recording. Print the label. Done.</li>
+            <li>
+              <span className="font-semibold text-foreground">1.</span> Install the WooCommerce
+              plugin on your store and note the pairing code it generates.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">2.</span> Install the desktop app on
+              your packing station and sign in with your PackagePro account.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">3.</span> Enter the pairing code in
+              the desktop app setup wizard to connect the store.
+            </li>
+            <li>
+              <span className="font-semibold text-foreground">4.</span> Scan an order barcode to
+              start recording. Print the label. Done.
+            </li>
           </ol>
         </div>
       </div>
@@ -564,7 +736,10 @@ function DownloadCard({
         {icon}
       </div>
       <h3 className="mt-4 text-lg font-bold">{title}</h3>
-      <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground" dangerouslySetInnerHTML={{ __html: description }} />
+      <p
+        className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground"
+        dangerouslySetInnerHTML={{ __html: description }}
+      />
       <a
         href={href}
         download
@@ -590,7 +765,8 @@ function CTASection() {
               Start recording proof-of-packing videos today
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">
-              Reduce disputes. Build trust. Give your customers full visibility into how their orders are packed.
+              Reduce disputes. Build trust. Give your customers full visibility into how their
+              orders are packed.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
@@ -651,30 +827,99 @@ function Footer() {
           <div>
             <h4 className="text-sm font-semibold">Product</h4>
             <ul className="mt-3 space-y-2">
-              <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground">Features</a></li>
-              <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">Pricing</a></li>
-              <li><a href="#security" className="text-sm text-muted-foreground hover:text-foreground">Security</a></li>
-              <li><Link href="/download" className="text-sm text-muted-foreground hover:text-foreground">Download</Link></li>
+              <li>
+                <a href="#features" className="text-sm text-muted-foreground hover:text-foreground">
+                  Features
+                </a>
+              </li>
+              <li>
+                <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">
+                  Pricing
+                </a>
+              </li>
+              <li>
+                <a href="#security" className="text-sm text-muted-foreground hover:text-foreground">
+                  Security
+                </a>
+              </li>
+              <li>
+                <Link
+                  href="/download"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Download
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold">Resources</h4>
             <ul className="mt-3 space-y-2">
-              <li><Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">Documentation</Link></li>
-              <li><a href="https://github.com/Chain-Haven/PackagePro" className="text-sm text-muted-foreground hover:text-foreground">GitHub</a></li>
-              <li><Link href="/changelog" className="text-sm text-muted-foreground hover:text-foreground">Changelog</Link></li>
-              <li><Link href="/status" className="text-sm text-muted-foreground hover:text-foreground">Status</Link></li>
+              <li>
+                <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">
+                  Documentation
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/Chain-Haven/PackagePro"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <Link
+                  href="/changelog"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Changelog
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/status"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Status
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold">Company</h4>
             <ul className="mt-3 space-y-2">
-              <li><a href="mailto:support@packagepro.io" className="text-sm text-muted-foreground hover:text-foreground">Support</a></li>
-              <li><Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">Terms of Service</Link></li>
-              <li><a href="mailto:sales@packagepro.io" className="text-sm text-muted-foreground hover:text-foreground">Contact</a></li>
+              <li>
+                <a
+                  href="mailto:support@packagepro.io"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Support
+                </a>
+              </li>
+              <li>
+                <Link
+                  href="/privacy"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <a
+                  href="mailto:sales@packagepro.io"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Contact
+                </a>
+              </li>
             </ul>
           </div>
         </div>

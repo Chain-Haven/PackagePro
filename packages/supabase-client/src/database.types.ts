@@ -1,10 +1,4 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export interface Database {
   public: {
@@ -313,7 +307,12 @@ export interface Database {
     Views: Record<string, never>;
     Functions: Record<string, never>;
     Enums: {
-      membership_role: 'org_owner' | 'org_admin' | 'warehouse_manager' | 'packer' | 'support_viewer';
+      membership_role:
+        | 'org_owner'
+        | 'org_admin'
+        | 'warehouse_manager'
+        | 'packer'
+        | 'support_viewer';
       station_status: 'online' | 'offline' | 'busy';
       order_video_status: 'none' | 'recording' | 'uploading' | 'ready' | 'failed' | 'deleted';
       video_status: 'uploading' | 'processing' | 'ready' | 'failed' | 'deleted';

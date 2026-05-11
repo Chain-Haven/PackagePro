@@ -28,10 +28,7 @@ export default async function AuditPage() {
     redirect('/onboarding');
   }
 
-  const { data: stores } = await supabase
-    .from('stores')
-    .select('id')
-    .eq('org_id', orgId);
+  const { data: stores } = await supabase.from('stores').select('id').eq('org_id', orgId);
   const storeIds = (stores ?? []).map((store) => store.id);
 
   const auditQueries = buildAuditQueries(supabase, orgId, storeIds);
@@ -74,10 +71,7 @@ export default async function AuditPage() {
           <tbody>
             {logs.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-8 text-center text-muted-foreground"
-                >
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                   No audit events recorded yet.
                 </td>
               </tr>
@@ -87,13 +81,17 @@ export default async function AuditPage() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(entry.created_at).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3">{entry.actor_type || 'unknown'}:{entry.actor_id || 'system'}</td>
+                  <td className="px-4 py-3">
+                    {entry.actor_type || 'unknown'}:{entry.actor_id || 'system'}
+                  </td>
                   <td className="px-4 py-3 font-medium">{entry.action}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {entry.resource_type || 'n/a'} {entry.resource_id || ''}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    <pre className="whitespace-pre-wrap">{JSON.stringify(entry.details || {}, null, 2)}</pre>
+                    <pre className="whitespace-pre-wrap">
+                      {JSON.stringify(entry.details || {}, null, 2)}
+                    </pre>
                   </td>
                 </tr>
               ))

@@ -17,16 +17,10 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
     const health = await getHealthSnapshot(createAdminClient, getWebEnv);
 
-    const { data: stores } = await admin
-      .from('stores')
-      .select('id, paired_at')
-      .eq('org_id', orgId);
+    const { data: stores } = await admin.from('stores').select('id, paired_at').eq('org_id', orgId);
 
     const storeIds = (stores ?? []).map((store: { id: string }) => store.id);
-    const { data: orgOrders } = await admin
-      .from('orders')
-      .select('id')
-      .eq('org_id', orgId);
+    const { data: orgOrders } = await admin.from('orders').select('id').eq('org_id', orgId);
     const orderIds = (orgOrders ?? []).map((order: { id: string }) => order.id);
 
     const [{ count: failedUploads }, { count: staleLocks }, { count: failedEmails }] =
@@ -49,7 +43,9 @@ export async function GET(request: NextRequest) {
           .eq('status', 'failed'),
       ]);
 
-    const unpairedStoreCount = (stores ?? []).filter((store: { paired_at?: string | null }) => !store.paired_at).length;
+    const unpairedStoreCount = (stores ?? []).filter(
+      (store: { paired_at?: string | null }) => !store.paired_at
+    ).length;
     const checks = buildOperationalHealthChecks({
       platformStatus: health.status === 'ok' ? 'ok' : 'degraded',
       supabaseStatus: health.checks.supabase,

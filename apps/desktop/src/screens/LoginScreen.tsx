@@ -45,7 +45,13 @@ export function LoginScreen({ onLogin }: Props) {
             <svg viewBox="0 0 64 64" fill="none" className="h-8 w-8">
               <path d="M18 24.5 32 17l14 7.5v15L32 47l-14-7.5v-15Z" fill="#fff" />
               <path d="M32 17v30" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" />
-              <path d="m18 24.5 14 7.5 14-7.5" stroke="#2563EB" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="m18 24.5 14 7.5 14-7.5"
+                stroke="#2563EB"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-foreground">PackagePro</h1>
@@ -70,7 +76,9 @@ export function LoginScreen({ onLogin }: Props) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Password
+            </label>
             <input
               type="password"
               value={password}

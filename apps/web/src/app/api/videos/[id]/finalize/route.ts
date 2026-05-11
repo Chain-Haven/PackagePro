@@ -16,10 +16,7 @@ import {
   decryptIfNeeded,
 } from '@packagepro/shared';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: videoId } = await params;
     const body = await request.json().catch(() => ({}));
@@ -58,7 +55,10 @@ export async function POST(
       .list(folderPath, { search: fileName });
 
     if (!storedFiles?.some((file) => file.name === fileName)) {
-      return NextResponse.json({ error: 'Uploaded video file not found in storage' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Uploaded video file not found in storage' },
+        { status: 409 }
+      );
     }
 
     const { data: latestUpload } = await admin
@@ -112,9 +112,7 @@ export async function POST(
     const rawToken = generateToken(VIEWER_TOKEN_BYTES);
     const tokenHash = hashToken(rawToken);
     const tokenTtlDays = storeSettings?.viewer_token_ttl_days ?? DEFAULT_VIEWER_TOKEN_TTL_DAYS;
-    const expiresAt = new Date(
-      Date.now() + tokenTtlDays * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const expiresAt = new Date(Date.now() + tokenTtlDays * 24 * 60 * 60 * 1000).toISOString();
 
     await admin.from('video_access_tokens').insert({
       video_id: videoId,
@@ -144,15 +142,13 @@ export async function POST(
     if (order) {
       if (store?.paired_at && store.url && store.webhook_secret) {
         const timestamp = Math.floor(Date.now() / 1000);
-        const webhookSecret = decryptIfNeeded(
-          store.webhook_secret as string,
-          getEncryptionKey()
-        );
-        const failedResponse = (error: unknown) => ({
-          ok: false,
-          status: 0,
-          json: async () => ({ error: String(error) }),
-        }) as Response;
+        const webhookSecret = decryptIfNeeded(store.webhook_secret as string, getEncryptionKey());
+        const failedResponse = (error: unknown) =>
+          ({
+            ok: false,
+            status: 0,
+            json: async () => ({ error: String(error) }),
+          }) as Response;
 
         const attachPayload = JSON.stringify({
           woo_order_id: order.woo_order_id,
@@ -204,10 +200,18 @@ export async function POST(
         const [attachRes, emailRes] = await Promise.all([attachRequest, emailRequest]);
         const attachJson = await attachRes.json().catch(() => ({}));
         attachSuccess = attachRes.ok && (attachJson as { success?: boolean }).success !== false;
-        attachError = attachSuccess ? null : ((attachJson as { error?: string; reason?: string }).error || (attachJson as { reason?: string }).reason || `HTTP ${attachRes.status}`);
+        attachError = attachSuccess
+          ? null
+          : (attachJson as { error?: string; reason?: string }).error ||
+            (attachJson as { reason?: string }).reason ||
+            `HTTP ${attachRes.status}`;
         const emailJson = await emailRes.json().catch(() => ({}));
         emailSuccess = emailRes.ok && (emailJson as { success?: boolean }).success !== false;
-        emailError = emailSuccess ? null : ((emailJson as { error?: string; reason?: string }).error || (emailJson as { reason?: string }).reason || `HTTP ${emailRes.status}`);
+        emailError = emailSuccess
+          ? null
+          : (emailJson as { error?: string; reason?: string }).error ||
+            (emailJson as { reason?: string }).reason ||
+            `HTTP ${emailRes.status}`;
 
         await admin.from('email_events').insert({
           order_id: video.order_id,

@@ -53,11 +53,7 @@ export async function POST(
     );
 
     const admin = createAdminClient();
-    const { data: store } = await admin
-      .from('stores')
-      .select('*')
-      .eq('id', storeId)
-      .single();
+    const { data: store } = await admin.from('stores').select('*').eq('id', storeId).single();
 
     if (!store || !store.webhook_secret) {
       return NextResponse.json({ error: 'Store not found' }, { status: 404 });
@@ -99,9 +95,8 @@ export async function POST(
       woo_order_key: order.order_key || null,
       status: order.status,
       customer_email: order.billing_email || null,
-      customer_name: [order.billing_first_name, order.billing_last_name]
-        .filter(Boolean)
-        .join(' ') || null,
+      customer_name:
+        [order.billing_first_name, order.billing_last_name].filter(Boolean).join(' ') || null,
       shipping_address: order.shipping || null,
       line_items: order.line_items || [],
       order_total: order.total ? String(order.total) : null,
@@ -110,10 +105,7 @@ export async function POST(
 
     for (let index = 0; index < records.length; index += UPSERT_BATCH_SIZE) {
       const batch = records.slice(index, index + UPSERT_BATCH_SIZE);
-      await admin.from('orders').upsert(
-        batch,
-        { onConflict: 'store_id,woo_order_id' }
-      );
+      await admin.from('orders').upsert(batch, { onConflict: 'store_id,woo_order_id' });
     }
 
     if (delivery?.id) {

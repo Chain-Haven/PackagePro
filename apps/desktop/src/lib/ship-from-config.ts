@@ -14,7 +14,9 @@ const SHIP_FROM_KEYS = {
   zip: 'ship_from_zip',
 } as const;
 
-export async function loadShipFromConfig(electronAPI: Window['electronAPI']): Promise<Partial<ShipFromConfig>> {
+export async function loadShipFromConfig(
+  electronAPI: Window['electronAPI']
+): Promise<Partial<ShipFromConfig>> {
   const [name, address, city, state, zip] = await Promise.all([
     electronAPI.getConfig(SHIP_FROM_KEYS.name),
     electronAPI.getConfig(SHIP_FROM_KEYS.address),

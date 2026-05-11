@@ -41,7 +41,10 @@ export default async function StationsPage() {
       <div className="mt-6 space-y-4">
         {(stations ?? []).length > 0 ? (
           (stations ?? []).map((station) => (
-            <div key={station.id} className="rounded-lg border border-border bg-background p-5 shadow-sm">
+            <div
+              key={station.id}
+              className="rounded-lg border border-border bg-background p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">{station.name}</h2>
@@ -55,12 +58,17 @@ export default async function StationsPage() {
               </div>
 
               <p className="mt-3 text-sm text-muted-foreground">
-                Last heartbeat: {station.last_heartbeat ? new Date(station.last_heartbeat).toLocaleString() : 'Never'}
+                Last heartbeat:{' '}
+                {station.last_heartbeat
+                  ? new Date(station.last_heartbeat).toLocaleString()
+                  : 'Never'}
               </p>
             </div>
           ))
         ) : (
-          <p className="text-muted-foreground">No stations registered yet. Install the desktop app and run the setup wizard.</p>
+          <p className="text-muted-foreground">
+            No stations registered yet. Install the desktop app and run the setup wizard.
+          </p>
         )}
       </div>
     </div>

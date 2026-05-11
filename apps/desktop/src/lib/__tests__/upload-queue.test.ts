@@ -92,9 +92,9 @@ describe('uploadQueue', () => {
       uploadToken: 'stale-upload-token',
     });
 
-    const persisted = JSON.parse(
-      localStorage.getItem('packagepro-upload-queue') ?? '[]'
-    ) as Array<Record<string, unknown>>;
+    const persisted = JSON.parse(localStorage.getItem('packagepro-upload-queue') ?? '[]') as Array<
+      Record<string, unknown>
+    >;
 
     expect(persisted).toHaveLength(1);
     expect(persisted[0]).not.toHaveProperty('uploadUrl');

@@ -54,7 +54,11 @@ export function normalizeExternalUrl(rawUrl: string, options: ExternalUrlOptions
   return parsed.toString().replace(/\/+$/, '');
 }
 
-export function buildExternalUrl(baseUrl: string, pathname: string, options: ExternalUrlOptions = {}): string {
+export function buildExternalUrl(
+  baseUrl: string,
+  pathname: string,
+  options: ExternalUrlOptions = {}
+): string {
   const normalizedBase = normalizeExternalUrl(baseUrl, options);
   return new URL(pathname, `${normalizedBase}/`).toString();
 }

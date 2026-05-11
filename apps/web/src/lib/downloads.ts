@@ -34,7 +34,7 @@ export async function getLatestRelease(): Promise<GitHubRelease | null> {
       {
         headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'PackagePro-Web' },
         next: { revalidate: 300 },
-      },
+      }
     );
     if (!res.ok) return null;
     const data = (await res.json()) as GitHubRelease;

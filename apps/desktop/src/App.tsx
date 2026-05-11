@@ -27,7 +27,9 @@ export function App() {
 
   async function checkSession() {
     const supabase = getSupabase();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session) {
       setScreen('login');
@@ -77,15 +79,10 @@ export function App() {
           </div>
         )}
 
-        {screen === 'login' && (
-          <LoginScreen onLogin={() => void checkSession()} />
-        )}
+        {screen === 'login' && <LoginScreen onLogin={() => void checkSession()} />}
 
         {screen === 'setup' && (
-          <SetupWizardScreen
-            onComplete={handleSetupComplete}
-            onLogout={handleLogout}
-          />
+          <SetupWizardScreen onComplete={handleSetupComplete} onLogout={handleLogout} />
         )}
 
         {screen === 'dashboard' && config && (

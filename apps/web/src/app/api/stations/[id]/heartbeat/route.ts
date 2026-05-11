@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireStationAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: stationId } = await params;
     const { admin } = await requireStationAccess(stationId, request);

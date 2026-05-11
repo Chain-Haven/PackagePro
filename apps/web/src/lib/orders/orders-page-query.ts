@@ -11,7 +11,7 @@ export function parseOrdersPageQuery(
 ): OrdersPageQuery {
   const getValue = (key: string) => {
     const value = searchParams[key];
-    return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+    return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
   };
 
   const page = Math.max(Number.parseInt(getValue('page') || '1', 10) || 1, 1);

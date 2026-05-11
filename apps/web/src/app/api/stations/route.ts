@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = RegisterStationSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 }
+      );
     }
 
     const { user } = await requireOrgRole(

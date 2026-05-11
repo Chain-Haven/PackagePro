@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  hasBearerAuthorization,
-  isPublicApiPath,
-  isPublicPath,
-} from '../middleware-auth';
+import { hasBearerAuthorization, isPublicApiPath, isPublicPath } from '../middleware-auth';
 
 describe('middleware auth helpers', () => {
   it('only treats specific API prefixes as public', () => {

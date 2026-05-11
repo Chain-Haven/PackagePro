@@ -28,32 +28,48 @@ export default async function DashboardPage() {
     redirect('/onboarding');
   }
 
-  const [{ count: storeCount }, { data: activeStations }, { count: orderCount }, { count: videoCount }, { data: stores }, { data: stations }] =
-    await Promise.all([
-      supabase.from('stores').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-      supabase
-        .from('stations')
-        .select('id, last_heartbeat, status')
-        .eq('org_id', organization.id)
-        .eq('status', 'online'),
-      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-      supabase.from('videos').select('id', { count: 'exact', head: true }).eq('org_id', organization.id),
-      supabase
-        .from('stores')
-        .select('id, name, url, sync_status, paired_at')
-        .eq('org_id', organization.id)
-        .order('created_at', { ascending: false })
-        .limit(3),
-      supabase
-        .from('stations')
-        .select('id, name, status, last_heartbeat')
-        .eq('org_id', organization.id)
-        .order('created_at', { ascending: false })
-        .limit(3),
-    ]);
+  const [
+    { count: storeCount },
+    { data: activeStations },
+    { count: orderCount },
+    { count: videoCount },
+    { data: stores },
+    { data: stations },
+  ] = await Promise.all([
+    supabase
+      .from('stores')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', organization.id),
+    supabase
+      .from('stations')
+      .select('id, last_heartbeat, status')
+      .eq('org_id', organization.id)
+      .eq('status', 'online'),
+    supabase
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', organization.id),
+    supabase
+      .from('videos')
+      .select('id', { count: 'exact', head: true })
+      .eq('org_id', organization.id),
+    supabase
+      .from('stores')
+      .select('id, name, url, sync_status, paired_at')
+      .eq('org_id', organization.id)
+      .order('created_at', { ascending: false })
+      .limit(3),
+    supabase
+      .from('stations')
+      .select('id, name, status, last_heartbeat')
+      .eq('org_id', organization.id)
+      .order('created_at', { ascending: false })
+      .limit(3),
+  ]);
   const activeCutoff = Date.now() - 2 * 60 * 1000;
   const activeStationCount = ((activeStations as any[]) || []).filter(
-    (station) => station.last_heartbeat && new Date(station.last_heartbeat).getTime() >= activeCutoff
+    (station) =>
+      station.last_heartbeat && new Date(station.last_heartbeat).getTime() >= activeCutoff
   ).length;
 
   return (
@@ -62,8 +78,8 @@ export default async function DashboardPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Overview</p>
         <h1 className="mt-2 text-3xl font-bold">{organization.name}</h1>
         <p className="mt-2 text-muted-foreground">
-          Workspace slug: <span className="font-medium text-foreground">{organization.slug}</span>. Signed in as{' '}
-          <span className="font-medium text-foreground">{membershipRole}</span>.
+          Workspace slug: <span className="font-medium text-foreground">{organization.slug}</span>.
+          Signed in as <span className="font-medium text-foreground">{membershipRole}</span>.
         </p>
       </div>
 
@@ -77,7 +93,9 @@ export default async function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <section className="rounded-lg border border-border bg-background p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Stores</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Your WooCommerce connections and pairing status.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your WooCommerce connections and pairing status.
+          </p>
 
           <div className="mt-4 space-y-3">
             {(stores ?? []).length > 0 ? (
@@ -89,14 +107,15 @@ export default async function DashboardPage() {
                       <p className="text-sm text-muted-foreground">{store.url}</p>
                     </div>
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      {store.paired_at ? 'Paired' : store.sync_status ?? 'pending'}
+                      {store.paired_at ? 'Paired' : (store.sync_status ?? 'pending')}
                     </span>
                   </div>
                 </div>
               ))
             ) : (
               <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                No stores connected yet. Use the onboarding flow or visit the Stores page to add one.
+                No stores connected yet. Use the onboarding flow or visit the Stores page to add
+                one.
               </p>
             )}
           </div>
@@ -104,7 +123,9 @@ export default async function DashboardPage() {
 
         <section className="rounded-lg border border-border bg-background p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Stations</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Registered packing benches that can claim orders.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Registered packing benches that can claim orders.
+          </p>
 
           <div className="mt-4 space-y-3">
             {(stations ?? []).length > 0 ? (
@@ -114,7 +135,10 @@ export default async function DashboardPage() {
                     <div>
                       <p className="font-medium">{station.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        Last heartbeat: {station.last_heartbeat ? new Date(station.last_heartbeat).toLocaleString() : 'Never'}
+                        Last heartbeat:{' '}
+                        {station.last_heartbeat
+                          ? new Date(station.last_heartbeat).toLocaleString()
+                          : 'Never'}
                       </p>
                     </div>
                     <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase text-foreground">

@@ -86,8 +86,7 @@ export function ViewerClient({ token }: { token: string }) {
       <div className="mx-auto max-w-md py-20">
         <h1 className="mb-2 text-center text-2xl font-bold">Verify Your Identity</h1>
         <p className="mb-6 text-center text-gray-400">
-          Please verify your identity to view the packing video for order #
-          {data.order_number}
+          Please verify your identity to view the packing video for order #{data.order_number}
         </p>
         {error && (
           <div className="mb-4 rounded bg-red-500/20 p-3 text-sm text-red-400">{error}</div>
@@ -105,9 +104,7 @@ export function ViewerClient({ token }: { token: string }) {
           </div>
           <div className="text-center text-sm text-gray-500">or</div>
           <div>
-            <label className="mb-1 block text-sm text-gray-400">
-              Shipping ZIP/Postal Code
-            </label>
+            <label className="mb-1 block text-sm text-gray-400">Shipping ZIP/Postal Code</label>
             <input
               type="text"
               value={postalCode}

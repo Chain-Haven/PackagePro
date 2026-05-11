@@ -36,7 +36,9 @@ export function LoginForm() {
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
       )}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium">
+          Email
+        </label>
         <input
           id="email"
           type="email"
@@ -48,7 +50,9 @@ export function LoginForm() {
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium">Password</label>
+        <label htmlFor="password" className="block text-sm font-medium">
+          Password
+        </label>
         <input
           id="password"
           type="password"
@@ -68,7 +72,9 @@ export function LoginForm() {
       </button>
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-primary hover:underline">Sign up</Link>
+        <Link href="/signup" className="text-primary hover:underline">
+          Sign up
+        </Link>
       </p>
     </form>
   );

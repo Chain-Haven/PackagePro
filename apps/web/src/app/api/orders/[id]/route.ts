@@ -2,17 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireOrderAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: orderId } = await params;
     const { admin } = await requireOrderAccess(orderId, request);
 
     const { data: order, error } = await admin
       .from('orders')
-      .select('*, order_locks(*), stores(id, name, url, shipstation_store_mappings(shipstation_account_id))')
+      .select(
+        '*, order_locks(*), stores(id, name, url, shipstation_store_mappings(shipstation_account_id))'
+      )
       .eq('id', orderId)
       .single();
 
@@ -21,12 +20,11 @@ export async function GET(
     }
 
     const store = order.stores as Record<string, unknown> | null;
-    const mappedAccountIds =
-      Array.isArray(store?.shipstation_store_mappings)
-        ? store.shipstation_store_mappings
-            .map((mapping) => (mapping as Record<string, string>).shipstation_account_id)
-            .filter(Boolean)
-        : [];
+    const mappedAccountIds = Array.isArray(store?.shipstation_store_mappings)
+      ? store.shipstation_store_mappings
+          .map((mapping) => (mapping as Record<string, string>).shipstation_account_id)
+          .filter(Boolean)
+      : [];
     const preferredAccountId = mappedAccountIds[0] ?? null;
 
     return NextResponse.json({

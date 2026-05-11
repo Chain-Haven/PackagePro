@@ -1,13 +1,26 @@
 import { z } from 'zod';
 
 // === Enums ===
-export const MembershipRole = z.enum(['org_owner', 'org_admin', 'warehouse_manager', 'packer', 'support_viewer']);
+export const MembershipRole = z.enum([
+  'org_owner',
+  'org_admin',
+  'warehouse_manager',
+  'packer',
+  'support_viewer',
+]);
 export type MembershipRole = z.infer<typeof MembershipRole>;
 
 export const StationStatus = z.enum(['online', 'offline', 'busy']);
 export type StationStatus = z.infer<typeof StationStatus>;
 
-export const OrderVideoStatus = z.enum(['none', 'recording', 'uploading', 'ready', 'failed', 'deleted']);
+export const OrderVideoStatus = z.enum([
+  'none',
+  'recording',
+  'uploading',
+  'ready',
+  'failed',
+  'deleted',
+]);
 export type OrderVideoStatus = z.infer<typeof OrderVideoStatus>;
 
 export const VideoStatus = z.enum(['uploading', 'processing', 'ready', 'failed', 'deleted']);

@@ -41,7 +41,9 @@ export function SignupForm() {
       return;
     }
 
-    setSuccess('Account created. Check your email to confirm your account, then sign in to finish setup.');
+    setSuccess(
+      'Account created. Check your email to confirm your account, then sign in to finish setup.'
+    );
     setLoading(false);
   }
 
@@ -54,7 +56,9 @@ export function SignupForm() {
         <div className="rounded-md bg-primary/10 p-3 text-sm text-primary">{success}</div>
       )}
       <div>
-        <label htmlFor="fullName" className="block text-sm font-medium">Full Name</label>
+        <label htmlFor="fullName" className="block text-sm font-medium">
+          Full Name
+        </label>
         <input
           id="fullName"
           type="text"
@@ -65,7 +69,9 @@ export function SignupForm() {
         />
       </div>
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">Email</label>
+        <label htmlFor="email" className="block text-sm font-medium">
+          Email
+        </label>
         <input
           id="email"
           type="email"
@@ -76,7 +82,9 @@ export function SignupForm() {
         />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium">Password</label>
+        <label htmlFor="password" className="block text-sm font-medium">
+          Password
+        </label>
         <input
           id="password"
           type="password"
@@ -96,7 +104,9 @@ export function SignupForm() {
       </button>
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+        <Link href="/login" className="text-primary hover:underline">
+          Sign in
+        </Link>
       </p>
     </form>
   );

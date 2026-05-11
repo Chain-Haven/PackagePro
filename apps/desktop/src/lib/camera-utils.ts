@@ -6,13 +6,11 @@ const BASE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   frameRate: { ideal: 30, max: 60 },
 };
 
-const RECORDING_MIME_TYPES = [
-  'video/webm;codecs=vp9',
-  'video/webm;codecs=vp8',
-  'video/webm',
-];
+const RECORDING_MIME_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
 
-export function buildCameraConstraintCandidates(preferredDeviceId?: string): MediaStreamConstraints[] {
+export function buildCameraConstraintCandidates(
+  preferredDeviceId?: string
+): MediaStreamConstraints[] {
   const fallbackConstraint = {
     video: BASE_VIDEO_CONSTRAINTS,
     audio: false,

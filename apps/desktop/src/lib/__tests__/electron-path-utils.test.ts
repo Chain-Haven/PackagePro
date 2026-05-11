@@ -9,8 +9,8 @@ describe('resolveWithin', () => {
   });
 
   it('rejects paths that escape the base directory', () => {
-    expect(() =>
-      resolveWithin('/tmp/packagepro', '/tmp/packagepro/../outside/file.enc')
-    ).toThrow('Path escapes allowed directory');
+    expect(() => resolveWithin('/tmp/packagepro', '/tmp/packagepro/../outside/file.enc')).toThrow(
+      'Path escapes allowed directory'
+    );
   });
 });
