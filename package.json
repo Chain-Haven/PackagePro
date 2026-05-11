@@ -4,18 +4,46 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "node scripts/verify-no-local-secrets.mjs && turbo build",
-    "lint": "turbo lint",
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
     "security:env": "node scripts/verify-no-local-secrets.mjs",
+    "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
     "test:ops": "node --test \"scripts/verify-no-local-secrets.test.mjs\"",
     "type-check": "turbo type-check",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@next/eslint-plugin-next": "^15.1.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0",
     "next": "^15",
-    "turbo": "^2"
+    "prettier": "^3.4.0",
+    "turbo": "^2",
+    "typescript-eslint": "^8.19.0"
   },
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=20"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   }
 }

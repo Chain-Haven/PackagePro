@@ -26,7 +26,10 @@ export function useCamera() {
     }
 
     setDevices(videoDevices);
-    if (videoDevices.length > 0 && !videoDevices.some((device) => device.deviceId === selectedDeviceId)) {
+    if (
+      videoDevices.length > 0 &&
+      !videoDevices.some((device) => device.deviceId === selectedDeviceId)
+    ) {
       setSelectedDeviceId(videoDevices[0].deviceId);
     }
     setError((current) => (current === noCameraMessage ? '' : current));
@@ -62,7 +65,9 @@ export function useCamera() {
           stream.getTracks().forEach((t) => t.stop());
         }
 
-        const candidates = buildCameraConstraintCandidates(deviceId || selectedDeviceId || undefined);
+        const candidates = buildCameraConstraintCandidates(
+          deviceId || selectedDeviceId || undefined
+        );
         let newStream: MediaStream | null = null;
         let lastError: unknown = null;
 
@@ -86,7 +91,7 @@ export function useCamera() {
         setStream(newStream);
         setError('');
         return newStream;
-      } catch (err) {
+      } catch (_err) {
         setError('Camera access denied or unavailable');
         return null;
       }

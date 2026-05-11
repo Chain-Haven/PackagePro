@@ -13,13 +13,14 @@ import {
   VIEWER_TOKEN_BYTES,
 } from '@packagepro/shared';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: videoId } = await params;
-    const { video, user, admin } = await requireVideoAccess(videoId, request, [
+    const {
+      video: _video,
+      user,
+      admin,
+    } = await requireVideoAccess(videoId, request, [
       'org_owner',
       'org_admin',
       'warehouse_manager',
@@ -32,10 +33,7 @@ export async function POST(
       .single();
 
     if (!hydratedVideo || hydratedVideo.status !== 'ready') {
-      return NextResponse.json(
-        { error: 'Video not found or not ready' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Video not found or not ready' }, { status: 404 });
     }
 
     const { data: storeSettings } = await admin
@@ -48,10 +46,7 @@ export async function POST(
     const store = order?.stores as Record<string, unknown>;
 
     if (!store?.paired_at || !store.webhook_secret) {
-      return NextResponse.json(
-        { error: 'Store not properly connected' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Store not properly connected' }, { status: 400 });
     }
 
     await admin
@@ -63,9 +58,7 @@ export async function POST(
     const rawToken = generateToken(VIEWER_TOKEN_BYTES);
     const tokenHash = hashToken(rawToken);
     const tokenTtlDays = storeSettings?.viewer_token_ttl_days ?? DEFAULT_VIEWER_TOKEN_TTL_DAYS;
-    const expiresAt = new Date(
-      Date.now() + tokenTtlDays * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const expiresAt = new Date(Date.now() + tokenTtlDays * 24 * 60 * 60 * 1000).toISOString();
 
     await admin.from('video_access_tokens').insert({
       video_id: videoId,

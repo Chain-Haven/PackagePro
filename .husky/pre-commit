@@ -1,0 +1,2 @@
+pnpm exec lint-staged
+node scripts/verify-no-local-secrets.mjs

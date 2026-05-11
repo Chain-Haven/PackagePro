@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import {
-  requireOrgMember,
-  requireOrgRole,
-  requireShipStationAccountAccess,
-  requireStoreAccess,
-} from '@/lib/auth';
+import { requireOrgMember, requireShipStationAccountAccess, requireStoreAccess } from '@/lib/auth';
 import { handleApiError } from '@/lib/api-utils';
 import { writeAuditLog } from '@/lib/audit';
 import { z } from 'zod';
@@ -82,13 +77,8 @@ export async function POST(request: NextRequest) {
     };
 
     const mappingQuery = existingMapping
-      ? admin
-          .from('shipstation_store_mappings')
-          .update(payload)
-          .eq('id', existingMapping.id)
-      : admin
-          .from('shipstation_store_mappings')
-          .insert(payload);
+      ? admin.from('shipstation_store_mappings').update(payload).eq('id', existingMapping.id)
+      : admin.from('shipstation_store_mappings').insert(payload);
 
     const { data: mapping, error } = await mappingQuery
       .select('*, stores(id, name), shipstation_accounts(id, label, connection_status)')
