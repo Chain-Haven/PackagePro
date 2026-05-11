@@ -1,0 +1,39 @@
+# PackagePro code owners
+#
+# Each line below maps a file pattern to one or more owners. Owners are
+# automatically requested for review on PRs that touch matching files.
+#
+# Customize the @chain-haven/* team handles to match your org's actual teams.
+# Until that's done, leave them commented out so GitHub doesn't 404 the team.
+
+# Default owners for everything in the repo
+*                                   @chain-haven/maintainers
+
+# Backend / web app
+/apps/web/                          @chain-haven/maintainers
+/apps/web/src/app/api/              @chain-haven/maintainers
+/apps/web/src/middleware.ts         @chain-haven/maintainers
+
+# Desktop client
+/apps/desktop/                      @chain-haven/maintainers
+
+# Shared packages
+/packages/shared/                   @chain-haven/maintainers
+/packages/db/                       @chain-haven/maintainers
+/packages/db/migrations/            @chain-haven/maintainers
+/packages/shipstation/              @chain-haven/maintainers
+/packages/supabase-client/          @chain-haven/maintainers
+
+# WooCommerce plugin (PHP)
+/plugins/woocommerce/               @chain-haven/maintainers
+
+# Security-sensitive paths require a second pair of eyes
+/docs/security.md                   @chain-haven/maintainers
+/docs/security-incident-response.md @chain-haven/maintainers
+/scripts/verify-no-local-secrets.*  @chain-haven/maintainers
+/packages/shared/src/crypto.ts      @chain-haven/maintainers
+
+# CI / build / dependency manifests
+/.github/                           @chain-haven/maintainers
+/turbo.json                         @chain-haven/maintainers
+/pnpm-lock.yaml                     @chain-haven/maintainers
