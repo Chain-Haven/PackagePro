@@ -39,7 +39,7 @@
     "vite": "^6",
     "vite-plugin-electron": "^0.28",
     "vite-plugin-electron-renderer": "^0.14",
-    "vitest": "^3"
+    "vitest": "^4"
   },
   "build": {
     "appId": "io.packagepro.desktop",
