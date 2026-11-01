@@ -22,7 +22,7 @@
     "react": "^19",
     "react-dom": "^19",
     "tailwind-merge": "^2.6",
-    "zod": "^3.23"
+    "zod": "^4.6"
   },
   "devDependencies": {
     "@packagepro/shared": "workspace:*",
